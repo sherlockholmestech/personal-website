@@ -1,0 +1,16 @@
+---
+title: 'Building a terminal website'
+date: '2026-05-24'
+tags: [svelte, design]
+---
+
+# Building a terminal website
+
+The site is shaped like a terminal multiplexer: one pane, prompts, rendered markdown, and a file tree.
+
+```ts
+type View = 'shell';
+const prompt = 'personal-website on master via v1.3.14';
+```
+
+The command surface should feel small, fast, and discoverable.
