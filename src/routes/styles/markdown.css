@@ -1,0 +1,220 @@
+.markdown {
+	line-height: 1.58;
+	font-size: 16px;
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3 {
+	margin: 0 0 12px;
+	color: var(--yellow);
+	font-weight: 700;
+	line-height: 1.15;
+}
+
+.markdown {
+	max-width: 86ch;
+	margin-right: auto;
+	margin-left: auto;
+}
+
+.markdown a {
+	color: var(--purple);
+	text-decoration: underline;
+	text-decoration-color: color-mix(in srgb, var(--purple) 70%, transparent);
+	text-underline-offset: 2px;
+}
+
+.markdown a:hover {
+	color: var(--magenta);
+	text-decoration-color: var(--magenta);
+}
+
+.post-reader .markdown {
+	padding: 0;
+}
+
+.markdown h1 {
+	font-size: 26px;
+}
+
+.markdown h2 {
+	margin-top: 20px;
+	color: var(--orange);
+	font-size: 19px;
+}
+
+.markdown h3 {
+	margin-top: 16px;
+	color: var(--green);
+	font-size: 17px;
+}
+
+.markdown p,
+.markdown ul,
+.markdown blockquote {
+	margin: 0 0 16px;
+}
+
+.markdown p,
+.markdown li,
+.markdown blockquote {
+	text-align: justify;
+	text-justify: inter-word;
+	white-space: pre-line;
+}
+
+.markdown strong {
+	color: var(--yellow);
+	font-weight: 700;
+}
+
+.markdown em {
+	color: var(--cyan);
+	font-style: italic;
+}
+
+.markdown p code,
+.markdown li code,
+.markdown blockquote code {
+	padding: 0 4px;
+	color: var(--yellow);
+	background: var(--bg-2);
+}
+
+.markdown img {
+	display: block;
+	max-width: 100%;
+	height: auto;
+	margin: 14px auto 18px;
+	border: 1px solid var(--border);
+}
+
+.markdown ul,
+.markdown ol {
+	padding-left: 24px;
+	list-style-position: outside;
+}
+
+.markdown li {
+	margin-bottom: 8px;
+}
+
+.markdown ul {
+	list-style: disc;
+}
+
+.markdown ol {
+	list-style: decimal;
+}
+
+.markdown li::marker {
+	color: var(--yellow);
+}
+
+.markdown blockquote {
+	padding: 8px 12px;
+	color: var(--tx);
+	border-left: 4px solid var(--cyan);
+	background: var(--bg-2);
+}
+
+.markdown hr {
+	border: 0;
+	border-top: 1px solid var(--border);
+	margin: 18px 0;
+}
+
+.bat {
+	margin: 14px 0;
+	overflow: hidden;
+	border-bottom: 1px solid var(--border);
+	background: var(--bg);
+}
+
+.bat-header {
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	padding: 8px 12px;
+	color: var(--tx-2);
+	font-size: 12px;
+	text-transform: lowercase;
+	line-height: 1;
+}
+
+.bat-header::before {
+	content: '';
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	height: 1px;
+	background: var(--border);
+}
+
+.bat-header span {
+	position: relative;
+	padding: 0 6px;
+	color: var(--yellow);
+	background: var(--bg);
+}
+
+.bat-body {
+	display: grid;
+	grid-template-columns: calc(5ch + 20px) minmax(0, 1fr);
+	align-items: start;
+	margin-top: 0;
+}
+
+.markdown .bat-lines,
+.bat-lines {
+	list-style: none;
+	margin: 0;
+	padding: 10px 8px 10px 12px;
+	color: var(--tx-2);
+	text-align: right;
+	border-right: 1px solid var(--border);
+	font-variant-numeric: tabular-nums;
+	justify-self: stretch;
+}
+
+.markdown .bat-lines li,
+.bat-lines li {
+	display: block;
+	margin: 0;
+	line-height: 1.45;
+	text-align: right;
+	white-space: nowrap;
+}
+
+.bat-lines li::marker {
+	content: '';
+}
+
+.bat-body > div {
+	min-width: 0;
+}
+
+.bat pre {
+	margin: 0 !important;
+	padding: 10px 12px !important;
+	background: transparent !important;
+	overflow-x: auto;
+}
+
+.bat-code pre {
+	padding: 10px 12px !important;
+}
+
+.bat code {
+	display: block;
+	background: transparent !important;
+	font-size: 16px;
+	line-height: 1.45;
+}
+
+.prompt-mini {
+	color: var(--tx-2);
+}
