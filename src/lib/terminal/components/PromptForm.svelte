@@ -14,18 +14,24 @@
 	} = $props();
 </script>
 
-<form class="prompt" onsubmit={(event) => (event.preventDefault(), onSubmit())}>
-	<div class="prompt-meta">
-		<span class="cwd">{cwd}</span>
+<form
+	class="mt-[14px] flex flex-col border-0 bg-[var(--bg)] p-0 text-[15px] max-[760px]:mt-[10px] max-[760px]:flex-wrap max-[760px]:pb-[max(6px,env(safe-area-inset-bottom))] max-[760px]:text-[16px]"
+	onsubmit={(event) => (event.preventDefault(), onSubmit())}
+>
+	<div class="text-[var(--tx)] leading-[1.45]">
+		<span class="text-[var(--cyan)] max-[760px]:text-[0px] max-[760px]:after:content-['~'] max-[760px]:after:text-[16px]">
+			{cwd}
+		</span>
 	</div>
-	<label class="prompt-input">
-		<span class="chevron">❯</span>
+	<label class="m-0 flex items-center gap-2 leading-[1.45] max-[760px]:min-h-[34px]">
+		<span class="text-[var(--yellow)]">❯</span>
 		<input
 			bind:this={inputRef}
 			bind:value={input}
 			aria-label="terminal command"
 			autocomplete="off"
 			onkeydown={onKeydown}
+			class="min-w-[40px] flex-1 border-0 bg-transparent text-[var(--tx)] outline-none caret-[var(--yellow)] max-[760px]:text-[16px]"
 		/>
 	</label>
 </form>

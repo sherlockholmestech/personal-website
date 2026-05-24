@@ -7,12 +7,17 @@
 	];
 </script>
 
-<div class="social-links">
-	<div class="social-links-title">socials</div>
+<div class="grid gap-[4px] my-[4px] mb-[14px]">
+	<div class="text-[var(--green)] font-bold leading-[1.45]">socials</div>
 	{#each links as link (link.url)}
-		<a href={link.url} target="_blank" rel="external noreferrer">
+		<a
+			href={link.url}
+			target="_blank"
+			rel="external noreferrer"
+			class="grid grid-cols-[10ch_minmax(0,1fr)] gap-[10px] leading-[1.45] text-[var(--cyan)] no-underline hover:text-[var(--yellow)] max-[760px]:grid-cols-1 max-[760px]:gap-0 max-[760px]:py-[5px]"
+		>
 			<span>{link.label}</span>
-			<strong>{link.url}</strong>
+			<strong class="min-w-0 font-normal [overflow-wrap:anywhere]">{link.url}</strong>
 		</a>
 	{/each}
 </div>

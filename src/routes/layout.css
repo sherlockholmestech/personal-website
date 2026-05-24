@@ -1,10 +1,140 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
 
-@import './styles/base.css';
-@import './styles/shell.css';
-@import './styles/terminal.css';
-@import './styles/content.css';
-@import './styles/fzf.css';
-@import './styles/markdown.css';
-@import './styles/mobile.css';
+@layer base {
+	@font-face {
+		font-family: 'Sarasa SC Mono Nerd Font';
+		src: url('/fonts/sarasa-mono-sc-regular-nerd-font.woff2') format('woff2');
+		font-weight: 400;
+		font-style: normal;
+		font-display: swap;
+	}
+
+	@font-face {
+		font-family: 'Sarasa SC Mono Nerd Font';
+		src: url('/fonts/sarasa-mono-sc-italic-nerd-font.woff2') format('woff2');
+		font-weight: 400;
+		font-style: italic;
+		font-display: swap;
+	}
+
+	@font-face {
+		font-family: 'Sarasa SC Mono Nerd Font';
+		src: url('/fonts/sarasa-mono-sc-semibold-nerd-font.woff2') format('woff2');
+		font-weight: 600;
+		font-style: normal;
+		font-display: swap;
+	}
+
+	@font-face {
+		font-family: 'Sarasa SC Mono Nerd Font';
+		src: url('/fonts/sarasa-mono-sc-semibolditalic-nerd-font.woff2') format('woff2');
+		font-weight: 600;
+		font-style: italic;
+		font-display: swap;
+	}
+
+	@font-face {
+		font-family: 'Sarasa SC Mono Nerd Font';
+		src: url('/fonts/sarasa-mono-sc-bold-nerd-font.woff2') format('woff2');
+		font-weight: 700;
+		font-style: normal;
+		font-display: swap;
+	}
+
+	@font-face {
+		font-family: 'Sarasa SC Mono Nerd Font';
+		src: url('/fonts/sarasa-mono-sc-bolditalic-nerd-font.woff2') format('woff2');
+		font-weight: 700;
+		font-style: italic;
+		font-display: swap;
+	}
+
+	:root {
+		font-family:
+			'Sarasa SC Mono Nerd Font', ui-monospace, 'SFMono-Regular', Consolas,
+			'Liberation Mono', monospace;
+		font-size: 16px;
+		color: #cecdc3;
+		background: #100f0f;
+		font-synthesis: none;
+		text-rendering: optimizeLegibility;
+	}
+
+	* {
+		box-sizing: border-box;
+		font-family:
+			'Sarasa SC Mono Nerd Font', ui-monospace, 'SFMono-Regular', Consolas,
+			'Liberation Mono', monospace !important;
+	}
+
+	html,
+	body {
+		margin: 0;
+		min-width: 320px;
+		min-height: 100vh;
+		background: #100f0f;
+	}
+
+	html,
+	body,
+	body > div {
+		width: 100%;
+		height: 100%;
+	}
+
+	button,
+	input,
+	pre,
+	code,
+	kbd {
+		font: inherit;
+	}
+
+	button {
+		border: 0;
+	}
+
+	::selection {
+		color: #100f0f;
+		background: #d0a215;
+	}
+
+	.workspace {
+		--bg: #100f0f;
+		--bg-2: #1c1b1a;
+		--ui: #282726;
+		--ui-2: #343331;
+		--tx: #cecdc3;
+		--tx-2: #878580;
+		--cyan: #3aa99f;
+		--blue: #4385be;
+		--purple: #8b7ec8;
+		--magenta: #ce5d97;
+		--green: #879a39;
+		--yellow: #d0a215;
+		--orange: #da702c;
+		--red: #d14d41;
+		--border: #575653;
+		--hard-border: #878580;
+	}
+
+	.workspace.light {
+		--bg: #fffcf0;
+		--bg-2: #f2f0e5;
+		--ui: #e6e4d9;
+		--ui-2: #dad8ce;
+		--tx: #100f0f;
+		--tx-2: #6f6e69;
+		--cyan: #24837b;
+		--blue: #205ea6;
+		--purple: #5e409d;
+		--magenta: #a02f6f;
+		--green: #66800b;
+		--yellow: #ad8301;
+		--orange: #bc5215;
+		--red: #af3029;
+		--border: #b7b5ac;
+		--hard-border: #6f6e69;
+	}
+}
