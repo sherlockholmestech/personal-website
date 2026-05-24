@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
+	import { resolve } from '$app/paths';
 	import { marked, type Tokens } from 'marked';
 	import { codeToHtml } from 'shiki';
 	import HighlightedCode from '$lib/HighlightedCode.svelte';
@@ -680,7 +681,9 @@
 								<span>{line.path}</span>
 							</div>
 							{#each childLinks(line.path) as entry (entry.path)}
-								<a href={entry.url}>{entry.directory ? '' : ''} {entry.name}</a>
+								<a href={resolve(entry.url as `/blog/${string}`)}
+									>{entry.directory ? '' : ''} {entry.name}</a
+								>
 							{/each}
 						</div>
 					{:else}
