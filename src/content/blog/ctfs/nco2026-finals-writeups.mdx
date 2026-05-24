@@ -1,8 +1,8 @@
 ---
 title: National Cybersecurity Olympiad 2026 Finals (Singapore) Writeups
 date: 2026-03-30
-description: "The beauty of tunnel vision"
-tags: ["Ctf", "Pwn", "Web", "Forensics"]
+description: 'The beauty of tunnel vision'
+tags: ['ctf', 'pwn', 'web', 'forensics']
 ---
 
 # Preamble (Rant about Infra)
@@ -16,10 +16,10 @@ Recommended listening: https://music.apple.com/sg/album/o-magnum-mysterium/48712
 ## base26/encoder
 
 > "Excellent!" I cried.
-> 
+>
 > "Elementary," said [Sherlock Holmes]. "It is one of those instances where the reasoner can produce an effect which seems remarkable to his neighbor, because the latter has missed the one little point which is the basis of the
->  deduction. [...]"
-> 
+> deduction. [...]"
+>
 > ~ Sir Arthur Conan Doyle, The Adventure of the Crooked Man
 
 I genuinely did not know what was going through my mind when I was tackling this challenge. I mistook it for a traditional ROP challenge, which cost me precious points and time during the competition time frame. Anyways, here is the challenge source:
@@ -55,7 +55,7 @@ _start:
     syscall
 
     call main
-    ; Exit 
+    ; Exit
     mov rdi, 0
     push 60
     pop rax
@@ -102,7 +102,7 @@ encode_loop:
     ; --- Custom Base26 Encoding ---
     movzx ax, byte [r9] ; Load the current byte into AX
     mov cl, 26
-    div cl              ; Divide AX by 26. 
+    div cl              ; Divide AX by 26.
                         ; AL gets the quotient, AH gets the remainder.
 
     add al, 'a'         ; Convert quotient to 'a'-'z'

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { onMount, tick } from 'svelte';
 	import {
 		buildTree,
@@ -17,11 +19,10 @@
 	import type { BlogPost, BlogSort, ShellLine, Theme } from '$lib/terminal/types';
 	import BlogBrowser from '$lib/terminal/components/BlogBrowser.svelte';
 	import HelpPanel from '$lib/terminal/components/HelpPanel.svelte';
-	import InlinePost from '$lib/terminal/components/InlinePost.svelte';
 	import MarkdownBlocks from '$lib/terminal/components/MarkdownBlocks.svelte';
+	import PostReader from '$lib/terminal/components/PostReader.svelte';
 	import PromptForm from '$lib/terminal/components/PromptForm.svelte';
 	import RouteLinks from '$lib/terminal/components/RouteLinks.svelte';
-	import SideReader from '$lib/terminal/components/SideReader.svelte';
 	import WelcomeBanner from '$lib/terminal/components/WelcomeBanner.svelte';
 
 	const ABOUT_MARKDOWN = `# About
@@ -42,14 +43,14 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 	let cwd = $state(HOME_DIRECTORY);
 	let history = $state<ShellLine[]>([{ kind: 'banner' }]);
 	let selectedPath = $state('');
-	let sideReaderVisible = $state(false);
+	let currentView = $state<'terminal' | 'post'>('terminal');
 	let blogBrowserVisible = $state(false);
 	let fzfQuery = $state('');
 	let fzfIndex = $state(0);
 	let blogSort = $state<BlogSort>('date-desc');
 	let routeInitialized = $state(false);
 	let theme = $state<Theme>('dark');
-	let terminalViewport: HTMLDivElement;
+	let terminalViewport = $state<HTMLDivElement>();
 	let promptInput = $state<HTMLInputElement>();
 	let fzfInput = $state<HTMLInputElement>();
 	let highlightedCode = $state<Record<string, string>>({});
@@ -67,7 +68,7 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 			}
 	);
 	let parsedPost = $derived(parseMarkdown(selectedPost.markdown, highlightedCode));
-	let sidePostBlocks = $derived(
+	let postViewBlocks = $derived(
 		parsedPost.filter((block, index) => !(index === 0 && block.type === 'heading'))
 	);
 	let fzfResults = $derived(sortPosts(searchPosts(posts, fzfQuery), blogSort));
@@ -99,7 +100,7 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 			} else {
 				if (posts.some((post) => post.path === requestedPath)) {
 					selectedPath = requestedPath;
-					sideReaderVisible = true;
+					currentView = 'post';
 				} else {
 					history = [...history, { kind: 'links', path: requestedPath }];
 				}
@@ -129,18 +130,9 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 		if (!command) return;
 
 		const commandCwd = cwd;
-		const start = performance.now();
-		const promptIndex = history.length;
-		history = [
-			...history,
-			{ kind: 'prompt', command, cwd: formatPromptPath(commandCwd), took: '' }
-		];
+		history = [...history, { kind: 'prompt', command, cwd: formatPromptPath(commandCwd) }];
 		input = '';
 		runCommand(command);
-		const took = elapsedTime(performance.now() - start);
-		history = history.map((line, index) =>
-			index === promptIndex && line.kind === 'prompt' ? { ...line, took } : line
-		);
 		await scrollToPrompt();
 	}
 
@@ -151,6 +143,7 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 		if (name === 'clear') {
 			history = [];
 			blogBrowserVisible = false;
+			if (currentView === 'post') closePostView();
 			return;
 		}
 
@@ -221,12 +214,6 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 		}
 
 		print([`${name}: command not found`], 'error');
-	}
-
-	function elapsedTime(milliseconds: number) {
-		return milliseconds < 1000
-			? `${Math.max(1, Math.round(milliseconds))}ms`
-			: `${Math.round(milliseconds / 1000)}s`;
 	}
 
 	function changeDirectory(target: string) {
@@ -304,8 +291,8 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 
 		selectedPath = entry.post.path;
 		blogBrowserVisible = false;
-		sideReaderVisible = false;
-		history = [...history, { kind: 'post', path: entry.post.path }];
+		currentView = 'post';
+		void updateUrlForView(entry.post.path);
 	}
 
 	async function openBlogSearch() {
@@ -329,9 +316,15 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 		if (!post) return;
 
 		selectedPath = post.path;
-		sideReaderVisible = true;
+		currentView = 'post';
 		blogBrowserVisible = false;
+		void updateUrlForView(post.path);
 		promptInput?.focus();
+	}
+
+	function closePostView() {
+		currentView = 'terminal';
+		void updateUrlForView();
 	}
 
 	function handleFzfKeydown(event: KeyboardEvent) {
@@ -373,10 +366,6 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 		fzfInput?.focus();
 	}
 
-	function findPost(path: string) {
-		return posts.find((post) => post.path === path);
-	}
-
 	function postBlocks(post: BlogPost) {
 		return parseMarkdown(post.markdown, highlightedCode);
 	}
@@ -406,7 +395,17 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 
 	async function scrollToPrompt() {
 		await tick();
+		if (!terminalViewport) return;
 		terminalViewport.scrollTop = terminalViewport.scrollHeight;
+	}
+
+	async function updateUrlForView(path?: string) {
+		const route = path ? resolve(`/${path}` as `/blog/${string}`) : resolve('/');
+		await goto(route, {
+			keepFocus: true,
+			noScroll: true,
+			replaceState: false
+		});
 	}
 </script>
 
@@ -419,85 +418,85 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 </svelte:head>
 
 <main class:light={theme === 'light'} class="workspace">
-	<section class:side-open={sideReaderVisible} class="panes">
-		<article class="pane shell-pane active">
-			<div class="pane-chrome">
-				<span class="pane-title">Sherlock Holmes // personal blog</span>
-			</div>
-			<div
-				bind:this={terminalViewport}
-				class="terminal-output"
-				aria-live="polite"
-				role="application"
-				onpointerdown={focusPrompt}
-			>
-				{#each history as line, index (index)}
-					{#if line.kind === 'prompt'}
-						<div class="prompt-block">
-							<div class="prompt-meta">
-								<span class="cwd">{line.cwd}</span>
-								{#if line.took}
-									<span> took </span>
-									<span class="duration">{line.took}</span>
-								{/if}
-							</div>
-							<pre class="prompt-command"><span class="chevron">❯</span> {line.command}</pre>
-						</div>
-					{:else if line.kind === 'post'}
-						{@const post = findPost(line.path)}
-						{#if post}
-							<InlinePost {post} blocks={postBlocks(post)} />
-						{/if}
-					{:else if line.kind === 'links'}
-						<RouteLinks path={line.path} entries={childLinks(line.path)} />
-					{:else if line.kind === 'banner'}
-						<WelcomeBanner />
-					{:else if line.kind === 'help'}
-						<HelpPanel />
-					{:else if line.kind === 'markdown'}
-						<div class="inline-reader markdown-message">
-							<div class="markdown">
-								<MarkdownBlocks blocks={parseMarkdown(line.markdown, {})} />
-							</div>
-						</div>
-					{:else}
-						<pre class={line.kind}>{line.text}</pre>
-					{/if}
-				{/each}
-
-				{#if blogBrowserVisible}
-					<BlogBrowser
-						bind:query={fzfQuery}
-						bind:inputRef={fzfInput}
-						{posts}
-						results={fzfResults}
-						selectedIndex={fzfIndex}
-						selectedPost={browserSelectedPost}
-						previewBlocks={browserPreviewBlocks}
-						sort={blogSort}
-						onQueryInput={handleQueryInput}
-						onKeydown={handleFzfKeydown}
-						onSortChange={handleBlogSortChange}
-						onSelect={selectFzfResult}
-						onOpen={openFzfSelection}
-					/>
+	<section class="app-frame">
+		<article class="terminal-window active">
+			<div class="window-chrome">
+				<span class="window-title">
+					{currentView === 'post' ? selectedPost.title : 'Sherlock Holmes // personal blog'}
+				</span>
+				{#if currentView === 'post'}
+					<button
+						type="button"
+						class="window-close"
+						aria-label="close blog reader"
+						onclick={closePostView}
+					>
+						X
+					</button>
 				{/if}
-
-				<PromptForm
-					cwd={formatPromptPath(cwd)}
-					bind:input
-					bind:inputRef={promptInput}
-					onKeydown={handlePromptKeydown}
-					onSubmit={submit}
-				/>
 			</div>
+			{#if currentView === 'post'}
+				<PostReader post={selectedPost} blocks={postViewBlocks} />
+			{:else}
+				<div
+					bind:this={terminalViewport}
+					class="terminal-output"
+					aria-live="polite"
+					role="application"
+					onpointerdown={focusPrompt}
+				>
+					{#each history as line, index (index)}
+						{#if line.kind === 'prompt'}
+							<div class="prompt-block">
+								<div class="prompt-meta">
+									<span class="cwd">{line.cwd}</span>
+								</div>
+								<pre class="prompt-command"><span class="chevron">❯</span> {line.command}</pre>
+							</div>
+						{:else if line.kind === 'links'}
+							<RouteLinks path={line.path} entries={childLinks(line.path)} />
+						{:else if line.kind === 'banner'}
+							<WelcomeBanner {posts} />
+						{:else if line.kind === 'help'}
+							<HelpPanel />
+						{:else if line.kind === 'markdown'}
+							<div class="inline-reader markdown-message">
+								<div class="markdown">
+									<MarkdownBlocks blocks={parseMarkdown(line.markdown, {})} />
+								</div>
+							</div>
+						{:else}
+							<pre class={line.kind}>{line.text}</pre>
+						{/if}
+					{/each}
+
+					{#if blogBrowserVisible}
+						<BlogBrowser
+							bind:query={fzfQuery}
+							bind:inputRef={fzfInput}
+							{posts}
+							results={fzfResults}
+							selectedIndex={fzfIndex}
+							selectedPost={browserSelectedPost}
+							previewBlocks={browserPreviewBlocks}
+							sort={blogSort}
+							onQueryInput={handleQueryInput}
+							onKeydown={handleFzfKeydown}
+							onSortChange={handleBlogSortChange}
+							onSelect={selectFzfResult}
+							onOpen={openFzfSelection}
+						/>
+					{/if}
+
+					<PromptForm
+						cwd={formatPromptPath(cwd)}
+						bind:input
+						bind:inputRef={promptInput}
+						onKeydown={handlePromptKeydown}
+						onSubmit={submit}
+					/>
+				</div>
+			{/if}
 		</article>
-		{#if sideReaderVisible}
-			<SideReader
-				post={selectedPost}
-				blocks={sidePostBlocks}
-				onClose={() => (sideReaderVisible = false)}
-			/>
-		{/if}
 	</section>
 </main>

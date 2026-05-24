@@ -3,8 +3,7 @@ export type BlogSort = 'date-desc' | 'date-asc' | 'title-asc' | 'path-asc';
 export type LineKind = 'prompt' | 'output' | 'success' | 'error' | 'muted';
 export type ShellLine =
 	| { kind: Exclude<LineKind, 'prompt'>; text: string }
-	| { kind: 'prompt'; command: string; cwd: string; took: string }
-	| { kind: 'post'; path: string }
+	| { kind: 'prompt'; command: string; cwd: string }
 	| { kind: 'links'; path: string }
 	| { kind: 'banner' }
 	| { kind: 'help' }
@@ -20,9 +19,9 @@ export type BlogPost = {
 };
 
 export type MdBlock =
-	| { type: 'heading'; level: number; text: string }
-	| { type: 'paragraph'; text: string }
+	| { type: 'heading'; level: number; text: string; html: string; id: string }
+	| { type: 'paragraph'; html: string }
 	| { type: 'list'; items: string[]; ordered: boolean }
 	| { type: 'code'; language: string; code: string; html: string }
-	| { type: 'quote'; text: string }
+	| { type: 'quote'; html: string }
 	| { type: 'hr' };

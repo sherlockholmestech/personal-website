@@ -1,8 +1,8 @@
 ---
 title: BlahajCTF 2025 Finals Writeups
 date: 2025-12-18
-description: "The interesting ones"
-tags: ["Ctf", "Forensics"]
+description: 'The interesting ones'
+tags: ['ctf', 'forensics']
 ---
 
 # forens - sleep-to-dream
@@ -49,7 +49,7 @@ undefined8 initialize(char *param_1)
   undefined8 uStack_6e0;
   undefined8 local_6d8 [213];
   undefined8 local_30;
-  
+
   uVar8 = 0;
   puVar5 = local_6d8;
   puVar6 = &DAT_00108a40;
@@ -97,7 +97,7 @@ Skipping down to the data below the DAT_00108a40 section, it appears that some s
 
 ![ghidra interface](/images/ctf/blahaj_ghidra2.png)
 
-But where could the ciphertext be? As previously mentioned, `4 - Criminal.txt` appears to only consist of 128 bytes of 0x0. Maybe that is what the memdump is for? After all, the ciphertext must be stored *somewhere* in memory.
+But where could the ciphertext be? As previously mentioned, `4 - Criminal.txt` appears to only consist of 128 bytes of 0x0. Maybe that is what the memdump is for? After all, the ciphertext must be stored _somewhere_ in memory.
 
 In order to interact with this memdump, we will be using Volatility 3.
 
@@ -165,17 +165,17 @@ def rc4(key: bytes, data: bytes) -> bytes:
 def main():
     # Parse hex bytes
     ciphertext = bytes.fromhex(CIPHERTEXT_HEX.replace('\n', '').replace(' ', ''))
-    
+
     print(f"Ciphertext length: {len(ciphertext)} bytes")
     print(f"RC4 key: {RC4_KEY.decode()}")
     print("=" * 60)
-    
+
     plaintext = rc4(RC4_KEY, ciphertext)
-    
+
     print("\nDecrypted plaintext:")
     print(plaintext.decode("utf-8", errors="replace"))
     print("\n" + "=" * 60)
-    
+
     with open("flag.txt", "wb") as f:
         f.write(plaintext)
     print("Saved to flag.txt")

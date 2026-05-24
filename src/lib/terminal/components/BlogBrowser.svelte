@@ -41,9 +41,7 @@
 	];
 
 	let sortOpen = $state(false);
-	let sortLabel = $derived(
-		sortOptions.find((option) => option.value === sort)?.label ?? 'newest'
-	);
+	let sortLabel = $derived(sortOptions.find((option) => option.value === sort)?.label ?? 'newest');
 
 	function toggleSortMenu() {
 		sortOpen = !sortOpen;
@@ -126,6 +124,12 @@
 	<div class="fzf-body">
 		<div class="fzf-results">
 			{#if results.length}
+				<div class="fzf-table-head" aria-hidden="true">
+					<span>title</span>
+					<span>date</span>
+					<span>tags</span>
+					<span>path</span>
+				</div>
 				{#each results as post, index (post.path)}
 					<button
 						type="button"
@@ -135,15 +139,13 @@
 						ondblclick={() => onOpen(index)}
 					>
 						<span class="fzf-title">{post.title}</span>
-						<span class="fzf-meta">
-							<span class="fzf-date">{formatPostDate(post.date)}</span>
-							<span class="fzf-tags">
-								{#each post.tags as tag (tag)}
-									<span>#{tag}</span>
-								{/each}
-							</span>
-							<span class="fzf-path">{post.path}</span>
+						<span class="fzf-date">{formatPostDate(post.date)}</span>
+						<span class="fzf-tags">
+							{#each post.tags as tag (tag)}
+								<span>#{tag}</span>
+							{/each}
 						</span>
+						<span class="fzf-path">{post.path}</span>
 					</button>
 				{/each}
 			{:else}

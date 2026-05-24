@@ -2,24 +2,39 @@ import { marked, type Tokens } from 'marked';
 import { codeToHtml } from 'shiki';
 import type { MdBlock, Theme } from './types';
 
+marked.use({
+	breaks: true
+});
+
 export function parseMarkdown(
 	markdown: string,
 	highlightedCode: Record<string, string>
 ): MdBlock[] {
+	const usedHeadingIds = new Map<string, number>();
+
 	return marked.lexer(markdown).flatMap((token): MdBlock[] => {
 		if (token.type === 'heading') {
-			return [{ type: 'heading', level: token.depth, text: token.text }];
+			return [
+				{
+					type: 'heading',
+					level: token.depth,
+					text: token.text,
+					html: inlineHtml(token.text),
+					id: headingId(token.text, usedHeadingIds)
+				}
+			];
 		}
 		if (token.type === 'paragraph') {
-			return [{ type: 'paragraph', text: token.text }];
+			return [{ type: 'paragraph', html: inlineHtml(token.text) }];
 		}
 		if (token.type === 'list') {
-			const items = token.items.map((item: Tokens.ListItem) => item.text);
+			const list = token as Tokens.List;
+			const items = list.items.map((item: Tokens.ListItem) => item.text);
 			return [
 				{
 					type: 'list',
-					items: items.map((item) => item.replace(/^\s*\d+\.\s+/, '')),
-					ordered: token.ordered
+					items: items.map((item) => inlineHtml(item.replace(/^\s*\d+\.\s+/, ''))),
+					ordered: list.ordered
 				}
 			];
 		}
@@ -35,7 +50,7 @@ export function parseMarkdown(
 			];
 		}
 		if (token.type === 'blockquote') {
-			return [{ type: 'quote', text: token.text }];
+			return [{ type: 'quote', html: inlineHtml(token.text) }];
 		}
 		if (token.type === 'hr') {
 			return [{ type: 'hr' }];
@@ -65,6 +80,25 @@ export async function highlightMarkdownCode(markdown: string, theme: Theme) {
 
 export function codeKey(code: string, language: string) {
 	return `${language}:${code}`;
+}
+
+function inlineHtml(value: string) {
+	return marked.parseInline(value) as string;
+}
+
+function headingId(text: string, used: Map<string, number>) {
+	const base = slugify(text) || 'section';
+	const count = used.get(base) ?? 0;
+	used.set(base, count + 1);
+	return count ? `${base}-${count + 1}` : base;
+}
+
+function slugify(text: string) {
+	return text
+		.toLowerCase()
+		.replace(/<[^>]*>/g, '')
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-+|-+$/g, '');
 }
 
 function escapeHtml(value: string) {
