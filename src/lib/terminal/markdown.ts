@@ -40,12 +40,14 @@ export function parseMarkdown(
 		}
 		if (token.type === 'code') {
 			const code = token as Tokens.Code;
+			const text = normalizeCodeBlock(code.text);
+			const language = code.lang || 'text';
 			return [
 				{
 					type: 'code',
-					language: code.lang || 'text',
-					code: code.text,
-					html: highlightedCode[codeKey(code.text, code.lang || 'text')] ?? escapeHtml(code.text)
+					language,
+					code: text,
+					html: highlightedCode[codeKey(text, language)] ?? escapeHtml(text)
 				}
 			];
 		}
@@ -67,11 +69,12 @@ export async function highlightMarkdownCode(markdown: string, theme: Theme) {
 	const entries = await Promise.all(
 		codeBlocks.map(async (block) => {
 			const language = block.lang || 'text';
-			const html = await codeToHtml(block.text, {
+			const text = normalizeCodeBlock(block.text);
+			const html = await codeToHtml(text, {
 				lang: language,
 				theme: theme === 'dark' ? 'vitesse-dark' : 'vitesse-light'
 			});
-			return [codeKey(block.text, language), html] as const;
+			return [codeKey(text, language), html] as const;
 		})
 	);
 
@@ -99,6 +102,16 @@ function slugify(text: string) {
 		.replace(/<[^>]*>/g, '')
 		.replace(/[^a-z0-9]+/g, '-')
 		.replace(/^-+|-+$/g, '');
+}
+
+function normalizeCodeBlock(value: string) {
+	return value
+		.replace(/\r\n?/g, '\n')
+		.split('\n')
+		.map((line) => line.replace(/[ \t]+$/g, ''))
+		.join('\n')
+		.replace(/^\n+|\n+$/g, '')
+		.replace(/\n{3,}/g, '\n\n');
 }
 
 function escapeHtml(value: string) {

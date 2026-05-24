@@ -67,6 +67,13 @@
 		onSortChange(nextSort);
 		sortOpen = false;
 	}
+
+	function handleResultClick(index: number) {
+		onSelect(index);
+		if (window.matchMedia('(max-width: 760px)').matches) {
+			onOpen(index);
+		}
+	}
 </script>
 
 <div class="fzf-browser">
@@ -135,7 +142,7 @@
 						type="button"
 						class:selected={index === selectedIndex}
 						class="fzf-row"
-						onclick={() => onSelect(index)}
+						onclick={() => handleResultClick(index)}
 						ondblclick={() => onOpen(index)}
 					>
 						<span class="fzf-title">{post.title}</span>

@@ -55,6 +55,7 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 	let promptInput = $state<HTMLInputElement>();
 	let fzfInput = $state<HTMLInputElement>();
 	let highlightedCode = $state<Record<string, string>>({});
+	const mobileShortcuts = ['help', 'blog', 'links', 'clear', 'home'];
 
 	let fileSystem = $derived(createFileSystem(posts));
 	let selectedPost = $derived(
@@ -112,6 +113,12 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 
 	function focusPrompt(event: PointerEvent) {
 		if (event.target instanceof HTMLInputElement) return;
+		if (event.target instanceof HTMLElement) {
+			const interactive = event.target.closest(
+				'button, a, input, textarea, select, [role="button"]'
+			);
+			if (interactive) return;
+		}
 		promptInput?.focus();
 	}
 
@@ -143,6 +150,13 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 
 		if (name === 'clear') {
 			history = [];
+			blogBrowserVisible = false;
+			if (currentView === 'post') closePostView();
+			return;
+		}
+
+		if (name === 'home') {
+			history = [{ kind: 'banner' }];
 			blogBrowserVisible = false;
 			if (currentView === 'post') closePostView();
 			return;
@@ -413,6 +427,11 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 			replaceState: false
 		});
 	}
+
+	async function runShortcut(command: string) {
+		input = command;
+		await submit();
+	}
 </script>
 
 <svelte:head>
@@ -495,6 +514,12 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 							onOpen={openFzfSelection}
 						/>
 					{/if}
+
+					<div class="mobile-command-bar" aria-label="quick commands">
+						{#each mobileShortcuts as command (command)}
+							<button type="button" onclick={() => runShortcut(command)}>{command}</button>
+						{/each}
+					</div>
 
 					<PromptForm
 						cwd={formatPromptPath(cwd)}
