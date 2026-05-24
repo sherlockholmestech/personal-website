@@ -1,48 +1,26 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
-	import { resolve } from '$app/paths';
-	import { marked, type Tokens } from 'marked';
-	import { codeToHtml } from 'shiki';
-	import HighlightedCode from '$lib/HighlightedCode.svelte';
-
-	type Theme = 'dark' | 'light';
-	type LineKind = 'prompt' | 'output' | 'success' | 'error' | 'muted';
-	type ShellLine =
-		| { kind: Exclude<LineKind, 'prompt'>; text: string }
-		| { kind: 'prompt'; command: string; cwd: string; took: string }
-		| { kind: 'post'; path: string }
-		| { kind: 'links'; path: string };
-	type BlogPost = {
-		path: string;
-		title: string;
-		date: string;
-		tags: string[];
-		markdown: string;
-	};
-	type MdBlock =
-		| { type: 'heading'; level: number; text: string }
-		| { type: 'paragraph'; text: string }
-		| { type: 'list'; items: string[] }
-		| { type: 'code'; language: string; code: string; html: string }
-		| { type: 'quote'; text: string }
-		| { type: 'hr' };
-
-	const commands = [
-		'help',
-		'about',
-		'info',
-		'pwd',
-		'cd blog',
-		'cd ..',
-		'ls',
-		'ls blog',
-		'tree blog',
-		'cat blog/2026/ctf/defcon',
-		'open blog/2026/ctf/defcon',
-		'theme dark',
-		'theme light',
-		'clear'
-	];
+	import { commandExamples } from '$lib/terminal/help';
+	import {
+		buildTree,
+		createFileSystem,
+		formatPromptPath,
+		HOME_DIRECTORY,
+		listEntries,
+		normalizePath,
+		postPathFromFilePath,
+		resolveEntry,
+		ROOT_DIRECTORY,
+		toHomeRelative
+	} from '$lib/terminal/filesystem';
+	import { highlightMarkdownCode, parseMarkdown } from '$lib/terminal/markdown';
+	import { searchPosts } from '$lib/terminal/search';
+	import type { BlogPost, ShellLine, Theme } from '$lib/terminal/types';
+	import BlogBrowser from '$lib/terminal/components/BlogBrowser.svelte';
+	import InlinePost from '$lib/terminal/components/InlinePost.svelte';
+	import PromptForm from '$lib/terminal/components/PromptForm.svelte';
+	import RouteLinks from '$lib/terminal/components/RouteLinks.svelte';
+	import SideReader from '$lib/terminal/components/SideReader.svelte';
 
 	let { data }: { data: { posts: BlogPost[]; requestedPath?: string; notFound?: boolean } } =
 		$props();
@@ -51,15 +29,15 @@
 	let routeNotFound = $derived(data.notFound);
 
 	let input = $state('');
-	let cwd = $state('~');
+	let cwd = $state(HOME_DIRECTORY);
 	let history = $state<ShellLine[]>([
 		{ kind: 'success', text: 'Welcome to my terminal website.' },
 		{
 			kind: 'muted',
-			text: 'Type `help` to list commands, or `cat blog/2026/ctf/defcon` to read a post.'
+			text: 'Type `help` to list commands, or `cat ~/blog/2026/ctf/defcon.md` to read a post.'
 		}
 	]);
-	let selectedPath = $state('blog/2026/ctf/defcon');
+	let selectedPath = $state('');
 	let sideReaderVisible = $state(false);
 	let blogBrowserVisible = $state(false);
 	let fzfQuery = $state('');
@@ -67,10 +45,11 @@
 	let routeInitialized = $state(false);
 	let theme = $state<Theme>('dark');
 	let terminalViewport: HTMLDivElement;
-	let promptInput: HTMLInputElement;
+	let promptInput = $state<HTMLInputElement>();
 	let fzfInput = $state<HTMLInputElement>();
 	let highlightedCode = $state<Record<string, string>>({});
 
+	let fileSystem = $derived(createFileSystem(posts));
 	let selectedPost = $derived(
 		posts.find((post) => post.path === selectedPath) ??
 			posts[0] ?? {
@@ -81,20 +60,25 @@
 				markdown: ''
 			}
 	);
-	let parsedPost = $derived(parseMarkdown(selectedPost.markdown));
+	let parsedPost = $derived(parseMarkdown(selectedPost.markdown, highlightedCode));
 	let sidePostBlocks = $derived(
 		parsedPost.filter((block, index) => !(index === 0 && block.type === 'heading'))
 	);
-	let tree = $derived(renderTree(posts.map((post) => post.path)));
-	let fzfResults = $derived(searchPosts(fzfQuery));
+	let fzfResults = $derived(searchPosts(posts, fzfQuery));
+
+	$effect(() => {
+		if (!selectedPath && posts.length) {
+			selectedPath = posts[0].path;
+		}
+	});
 
 	onMount(async () => {
 		await tick();
-		promptInput.focus();
+		promptInput?.focus();
 	});
 
 	$effect(() => {
-		void highlightCodeBlocks(selectedPost.markdown);
+		void updateHighlightedCode(selectedPost.markdown, theme);
 	});
 
 	$effect(() => {
@@ -118,7 +102,7 @@
 
 	function focusPrompt(event: PointerEvent) {
 		if (event.target instanceof HTMLInputElement) return;
-		promptInput.focus();
+		promptInput?.focus();
 	}
 
 	function handlePromptKeydown(event: KeyboardEvent) {
@@ -146,7 +130,10 @@
 		const commandCwd = cwd;
 		const start = performance.now();
 		const promptIndex = history.length;
-		history = [...history, { kind: 'prompt', command, cwd: commandCwd, took: '' }];
+		history = [
+			...history,
+			{ kind: 'prompt', command, cwd: formatPromptPath(commandCwd), took: '' }
+		];
 		input = '';
 		runCommand(command);
 		const took = elapsedTime(performance.now() - start);
@@ -167,21 +154,21 @@
 		}
 
 		if (name === 'pwd') {
-			print([cwd === '~' ? '/home/sherlock' : `/home/sherlock/${cwd}`]);
+			print([cwd || ROOT_DIRECTORY]);
 			return;
 		}
 
 		if (name === 'cd') {
-			changeDirectory(target || '~');
+			changeDirectory(target || HOME_DIRECTORY);
 			return;
 		}
 
 		if (name === 'help') {
 			print([
 				'Commands:',
-				...commands.map((entry) => `  ${entry}`),
+				...commandExamples.map((entry) => `  ${entry}`),
 				'',
-				'Tip: `ls` renders the blog folder tree; `cat <path>` opens a post inline.'
+				'Unix tips: `ls` lists directories, `cat` reads files, `cd` accepts absolute or ~/ paths.'
 			]);
 			return;
 		}
@@ -206,12 +193,12 @@
 		}
 
 		if (name === 'ls') {
-			listDirectory(target);
+			listDirectory(target || '.');
 			return;
 		}
 
 		if (name === 'tree') {
-			treeDirectory(target);
+			treeDirectory(target || '.');
 			return;
 		}
 
@@ -222,16 +209,7 @@
 		}
 
 		if (name === 'cat' || name === 'open') {
-			const path = resolvePath(target);
-			const post = posts.find((entry) => entry.path === path);
-			if (!post) {
-				print([`${name}: ${target}: no such markdown file`], 'error');
-				return;
-			}
-			selectedPath = post.path;
-			blogBrowserVisible = false;
-			sideReaderVisible = false;
-			history = [...history, { kind: 'post', path: post.path }];
+			openPost(target, name);
 			return;
 		}
 
@@ -248,10 +226,6 @@
 		print([`${name}: command not found`], 'error');
 	}
 
-	function promptLabel() {
-		return cwd;
-	}
-
 	function elapsedTime(milliseconds: number) {
 		return milliseconds < 1000
 			? `${Math.max(1, Math.round(milliseconds))}ms`
@@ -259,113 +233,82 @@
 	}
 
 	function changeDirectory(target: string) {
-		const path = normalizePath(target);
-		if (path === '~' || directoryExists(path)) {
-			cwd = path;
+		const path = normalizePath(target, cwd);
+		const entry = resolveEntry(fileSystem, path);
+		if (entry.type === 'directory') {
+			cwd = entry.path;
 			return;
 		}
-		print([`cd: no such file or directory: ${target}`], 'error');
+		if (entry.type === 'file') {
+			print([`cd: ${target}: Not a directory`], 'error');
+			return;
+		}
+		print([`cd: ${target}: No such file or directory`], 'error');
 	}
 
 	function listDirectory(target: string) {
-		const path = target ? normalizePath(target) : cwd;
+		const path = normalizePath(target, cwd);
+		const entry = resolveEntry(fileSystem, path);
 
-		if (path === '~') {
-			print(['blog']);
+		if (entry.type === 'missing') {
+			print([`ls: cannot access '${target}': No such file or directory`], 'error');
 			return;
 		}
 
-		const children = childNames(path);
+		if (entry.type === 'file') {
+			const name = entry.filePath.split('/').pop() ?? entry.filePath;
+			print([target === '.' ? name : target]);
+			return;
+		}
+
+		const children = listEntries(fileSystem, entry.path);
 		if (children.length) {
-			print(children);
-			return;
+			print(children.map((child) => child.name));
 		}
-
-		const post = posts.find((entry) => entry.path === path);
-		if (post) {
-			print([`${post.path}.md`]);
-			return;
-		}
-
-		print([`ls: cannot access '${target}': no such directory`], 'error');
 	}
 
 	function treeDirectory(target: string) {
-		const path = target ? normalizePath(target) : cwd;
+		const path = normalizePath(target, cwd);
+		const entry = resolveEntry(fileSystem, path);
 
-		if (path === '~') {
-			print(['blog', ...tree.map((line) => `  ${line}`)]);
+		if (entry.type === 'missing') {
+			print([`tree: ${target}: No such file or directory`], 'error');
 			return;
 		}
 
-		if (path === 'blog') {
-			print(['blog', ...tree.map((line) => `  ${line}`)]);
+		if (entry.type === 'file') {
+			print([`tree: ${target}: Not a directory`], 'error');
 			return;
 		}
 
-		const entries = childEntries(path);
-		if (!entries.length) {
-			print([`tree: ${target}: no such directory`], 'error');
+		const label = target === '.' ? '.' : formatPromptPath(entry.path);
+		const lines = buildTree(fileSystem, entry.path);
+		print([label, ...lines.map((line) => `  ${line}`)]);
+	}
+
+	function openPost(target: string, commandName: string) {
+		if (!target) {
+			print([`${commandName}: missing file operand`], 'error');
 			return;
 		}
 
-		print([path, ...drawEntriesTree(path).map((line) => `  ${line}`)]);
-	}
+		const path = normalizePath(target, cwd);
+		const entry = resolveEntry(fileSystem, path);
 
-	function normalizePath(target: string) {
-		if (!target || target === '~' || target === '/') return '~';
-		const base =
-			cwd === '~' || target.startsWith('/') || target.startsWith('~') ? [] : cwd.split('/');
-		const rawParts = target.replace(/^~\/?/, '').replace(/^\//, '').split('/');
-		const parts = [...base];
-
-		for (const part of rawParts) {
-			if (!part || part === '.') continue;
-			if (part === '..') parts.pop();
-			else parts.push(part);
+		if (entry.type === 'missing') {
+			print([`${commandName}: ${target}: No such file or directory`], 'error');
+			return;
 		}
 
-		return parts.length ? parts.join('/') : '~';
-	}
-
-	function resolvePath(target: string) {
-		const path = normalizePath(target);
-		if (posts.find((post) => post.path === path)) return path;
-		if (!path.startsWith('blog/') && posts.find((post) => post.path === `blog/${path}`)) {
-			return `blog/${path}`;
-		}
-		return undefined;
-	}
-
-	function directoryExists(path: string) {
-		return posts.some((post) => post.path === path || post.path.startsWith(`${path}/`));
-	}
-
-	function childNames(path: string) {
-		return childEntries(path).map((entry) => entry.name);
-	}
-
-	function childEntries(path: string) {
-		const prefix = path === '~' ? '' : `${path}/`;
-		const children: { name: string; path: string; directory: boolean }[] = [];
-
-		for (const post of posts) {
-			if (!post.path.startsWith(prefix)) continue;
-			const child = post.path.slice(prefix.length).split('/')[0];
-			if (!child) continue;
-
-			const childPath = prefix ? `${path}/${child}` : child;
-			const directory = post.path !== childPath;
-			const name = child;
-
-			if (!children.some((entry) => entry.path === childPath)) {
-				children.push({ name, path: childPath, directory });
-			}
+		if (entry.type === 'directory') {
+			print([`${commandName}: ${target}: Is a directory`], 'error');
+			return;
 		}
 
-		return children.sort(
-			(a, b) => Number(b.directory) - Number(a.directory) || a.name.localeCompare(b.name)
-		);
+		selectedPath = entry.post.path;
+		blogBrowserVisible = false;
+		sideReaderVisible = false;
+		history = [...history, { kind: 'post', path: entry.post.path }];
 	}
 
 	async function openBlogSearch() {
@@ -378,42 +321,20 @@
 		fzfInput?.focus();
 	}
 
-	function searchPosts(query: string) {
-		const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
-
-		if (!terms.length) return posts;
-
-		return posts.filter((post) => {
-			const tagTerms = terms.filter((term) => term.startsWith('#')).map((term) => term.slice(1));
-			const pathTerms = terms.filter((term) => term.startsWith('/')).map((term) => term.slice(1));
-			const textTerms = terms.filter((term) => !term.startsWith('#') && !term.startsWith('/'));
-			const haystack = [post.title, post.path, post.date, post.tags.join(' '), post.markdown]
-				.join('\n')
-				.toLowerCase();
-			const tags = post.tags.map((tag) => tag.toLowerCase());
-			const path = post.path.toLowerCase();
-			return (
-				tagTerms.every((term) => tags.some((tag) => tag.includes(term))) &&
-				pathTerms.every((term) => path.includes(term)) &&
-				textTerms.every((term) => haystack.includes(term))
-			);
-		});
-	}
-
 	function moveFzfSelection(delta: number) {
 		if (!fzfResults.length) return;
 		fzfIndex = (fzfIndex + delta + fzfResults.length) % fzfResults.length;
 		selectedPath = fzfResults[fzfIndex].path;
 	}
 
-	function openFzfSelection() {
-		const post = fzfResults[fzfIndex];
+	function openFzfSelection(index = fzfIndex) {
+		const post = fzfResults[index];
 		if (!post) return;
 
 		selectedPath = post.path;
 		sideReaderVisible = true;
 		blogBrowserVisible = false;
-		promptInput.focus();
+		promptInput?.focus();
 	}
 
 	function handleFzfKeydown(event: KeyboardEvent) {
@@ -432,8 +353,13 @@
 		if (event.key === 'Escape') {
 			event.preventDefault();
 			blogBrowserVisible = false;
-			promptInput.focus();
+			promptInput?.focus();
 		}
+	}
+
+	function handleQueryInput() {
+		fzfIndex = 0;
+		selectedPath = fzfResults[0]?.path ?? selectedPath;
 	}
 
 	function selectFzfResult(index: number) {
@@ -442,153 +368,35 @@
 		fzfInput?.focus();
 	}
 
-	function postExcerpt(post: BlogPost) {
-		return (
-			post.markdown
-				.split('\n')
-				.find((line) => line.trim() && !line.startsWith('#') && !line.startsWith('```')) ?? ''
-		);
-	}
-
 	function findPost(path: string) {
 		return posts.find((post) => post.path === path);
 	}
 
 	function postBlocks(post: BlogPost) {
-		return parseMarkdown(post.markdown);
+		return parseMarkdown(post.markdown, highlightedCode);
 	}
 
 	function childLinks(path: string) {
-		return childEntries(path).map((entry) => ({
-			...entry,
-			url: `/${entry.path}`
-		}));
+		const directoryPath = normalizePath(path, HOME_DIRECTORY);
+		const entries = listEntries(fileSystem, directoryPath);
+		return entries.map((entry) => {
+			const relativePath =
+				entry.type === 'file' ? postPathFromFilePath(entry.path) : toHomeRelative(entry.path);
+			return {
+				name: entry.type === 'file' ? entry.name.replace(/\.md$/, '') : entry.name,
+				path: entry.path,
+				directory: entry.type === 'directory',
+				url: `/${relativePath}`
+			};
+		});
 	}
 
-	function matchingPreview(post: BlogPost) {
-		const terms = fzfQuery
-			.toLowerCase()
-			.split(/\s+/)
-			.filter((term) => term && !term.startsWith('#') && !term.startsWith('/'));
-
-		if (!terms.length) return postExcerpt(post);
-
-		return (
-			post.markdown
-				.split('\n')
-				.find((line) => terms.some((term) => line.toLowerCase().includes(term))) ??
-			postExcerpt(post)
-		);
-	}
-
-	function print(lines: string[], kind: Exclude<LineKind, 'prompt'> = 'output') {
+	function print(lines: string[], kind: 'output' | 'success' | 'error' | 'muted' = 'output') {
 		history = [...history, ...lines.map((text) => ({ kind, text }))];
 	}
 
-	function renderTree(paths: string[]) {
-		const root: Record<string, unknown> = {};
-		for (const path of paths) {
-			let node = root;
-			for (const part of path.split('/')) {
-				node[part] ??= {};
-				node = node[part] as Record<string, unknown>;
-			}
-		}
-		return drawNode(root.blog as Record<string, unknown>);
-	}
-
-	function drawNode(node: Record<string, unknown>, prefix = ''): string[] {
-		const entries = Object.keys(node).sort();
-		return entries.flatMap((entry, index) => {
-			const last = index === entries.length - 1;
-			const branch = last ? '└── ' : '├── ';
-			const nextPrefix = prefix + (last ? '    ' : '│   ');
-			const child = node[entry] as Record<string, unknown>;
-			const directory = Object.keys(child).length > 0;
-			return [
-				`${prefix}${branch}${directory ? ' ' : ' '}${entry}`,
-				...drawNode(child, nextPrefix)
-			];
-		});
-	}
-
-	function drawEntriesTree(path: string, prefix = ''): string[] {
-		const entries = childEntries(path);
-
-		return entries.flatMap((entry, index) => {
-			const last = index === entries.length - 1;
-			const branch = last ? '└── ' : '├── ';
-			const nextPrefix = prefix + (last ? '    ' : '│   ');
-
-			return [
-				`${prefix}${branch}${entry.directory ? ' ' : ' '}${entry.name}`,
-				...(entry.directory ? drawEntriesTree(entry.path, nextPrefix) : [])
-			];
-		});
-	}
-
-	function parseMarkdown(markdown: string): MdBlock[] {
-		return marked.lexer(markdown).flatMap((token): MdBlock[] => {
-			if (token.type === 'heading') {
-				return [{ type: 'heading', level: token.depth, text: token.text }];
-			}
-			if (token.type === 'paragraph') {
-				return [{ type: 'paragraph', text: token.text }];
-			}
-			if (token.type === 'list') {
-				return [{ type: 'list', items: token.items.map((item: Tokens.ListItem) => item.text) }];
-			}
-			if (token.type === 'code') {
-				const code = token as Tokens.Code;
-				return [
-					{
-						type: 'code',
-						language: code.lang || 'text',
-						code: code.text,
-						html: highlightedCode[codeKey(code.text, code.lang || 'text')] ?? escapeHtml(code.text)
-					}
-				];
-			}
-			if (token.type === 'blockquote') {
-				return [{ type: 'quote', text: token.text }];
-			}
-			if (token.type === 'hr') {
-				return [{ type: 'hr' }];
-			}
-			return [];
-		});
-	}
-
-	async function highlightCodeBlocks(markdown: string) {
-		const codeBlocks = marked
-			.lexer(markdown)
-			.filter((token): token is Tokens.Code => token.type === 'code');
-
-		const entries = await Promise.all(
-			codeBlocks.map(async (block) => {
-				const language = block.lang || 'text';
-				const html = await codeToHtml(block.text, {
-					lang: language,
-					theme: theme === 'dark' ? 'vitesse-dark' : 'vitesse-light'
-				});
-				return [codeKey(block.text, language), html] as const;
-			})
-		);
-
-		highlightedCode = Object.fromEntries(entries);
-	}
-
-	function codeKey(code: string, language: string) {
-		return `${language}:${code}`;
-	}
-
-	function escapeHtml(value: string) {
-		return value
-			.replaceAll('&', '&amp;')
-			.replaceAll('<', '&lt;')
-			.replaceAll('>', '&gt;')
-			.replaceAll('"', '&quot;')
-			.replaceAll("'", '&#39;');
+	async function updateHighlightedCode(markdown: string, nextTheme: Theme) {
+		highlightedCode = await highlightMarkdownCode(markdown, nextTheme);
 	}
 
 	async function scrollToPrompt() {
@@ -634,182 +442,45 @@
 					{:else if line.kind === 'post'}
 						{@const post = findPost(line.path)}
 						{#if post}
-							<div class="inline-reader">
-								<div class="post-meta">
-									<span class="green">opened</span>
-									<span>{post.path}.md</span>
-								</div>
-								<div class="markdown">
-									{#each postBlocks(post) as block, blockIndex (blockIndex)}
-										{#if block.type === 'heading'}
-											<svelte:element this={`h${Math.min(block.level, 3)}`}
-												>{block.text}</svelte:element
-											>
-											{#if blockIndex === 0}
-												<div class="post-title-meta">
-													<span>{post.date}</span>
-													{#each post.tags as tag (tag)}
-														<span>#{tag}</span>
-													{/each}
-												</div>
-											{/if}
-										{:else if block.type === 'paragraph'}
-											<p>{block.text}</p>
-										{:else if block.type === 'list'}
-											<ul>
-												{#each block.items as item (item)}
-													<li>{item}</li>
-												{/each}
-											</ul>
-										{:else if block.type === 'quote'}
-											<blockquote>{block.text}</blockquote>
-										{:else if block.type === 'code'}
-											<div class="bat">
-												<HighlightedCode html={block.html} />
-											</div>
-										{:else}
-											<hr />
-										{/if}
-									{/each}
-								</div>
-							</div>
+							<InlinePost {post} blocks={postBlocks(post)} />
 						{/if}
 					{:else if line.kind === 'links'}
-						<div class="route-links">
-							<div class="post-meta">
-								<span class="green">listing</span>
-								<span>{line.path}</span>
-							</div>
-							{#each childLinks(line.path) as entry (entry.path)}
-								<a href={resolve(entry.url as `/blog/${string}`)}
-									>{entry.directory ? '' : ''} {entry.name}</a
-								>
-							{/each}
-						</div>
+						<RouteLinks path={line.path} entries={childLinks(line.path)} />
 					{:else}
 						<pre class={line.kind}>{line.text}</pre>
 					{/if}
 				{/each}
 
 				{#if blogBrowserVisible}
-					<div class="fzf-browser">
-						<div class="fzf-header">
-							<span>~/blog</span>
-							<span>{fzfResults.length}/{posts.length} posts</span>
-						</div>
-						<label class="fzf-search">
-							<span>query</span>
-							<input
-								bind:this={fzfInput}
-								bind:value={fzfQuery}
-								aria-label="search blog posts"
-								autocomplete="off"
-								oninput={() => (
-									(fzfIndex = 0),
-									(selectedPath = fzfResults[0]?.path ?? selectedPath)
-								)}
-								onkeydown={handleFzfKeydown}
-							/>
-						</label>
-						<div class="fzf-body">
-							<div class="fzf-results">
-								{#each fzfResults as post, index (post.path)}
-									<button
-										type="button"
-										class:selected={index === fzfIndex}
-										class="fzf-row"
-										onclick={() => selectFzfResult(index)}
-										ondblclick={openFzfSelection}
-									>
-										<span class="fzf-title">{post.title}</span>
-										<span class="fzf-meta">
-											<span class="fzf-tags">
-												{#each post.tags as tag (tag)}
-													<span>#{tag}</span>
-												{/each}
-											</span>
-											<span class="fzf-path">{post.path}</span>
-										</span>
-									</button>
-								{/each}
-							</div>
-							<div class="fzf-preview">
-								<div class="fzf-preview-label">preview</div>
-								<div class="preview-title">{selectedPost.title}</div>
-								<div class="preview-meta">{selectedPost.date} · {selectedPost.tags.join(', ')}</div>
-								<p>{matchingPreview(selectedPost)}</p>
-								<div class="preview-hint">cat {selectedPost.path}</div>
-							</div>
-						</div>
-					</div>
+					<BlogBrowser
+						bind:query={fzfQuery}
+						bind:inputRef={fzfInput}
+						{posts}
+						results={fzfResults}
+						selectedIndex={fzfIndex}
+						{selectedPost}
+						onQueryInput={handleQueryInput}
+						onKeydown={handleFzfKeydown}
+						onSelect={selectFzfResult}
+						onOpen={openFzfSelection}
+					/>
 				{/if}
 
-				<form class="prompt" onsubmit={(event) => (event.preventDefault(), submit())}>
-					<div class="prompt-meta">
-						<span class="cwd">{promptLabel()}</span>
-					</div>
-					<label class="prompt-input">
-						<span class="chevron">❯</span>
-						<input
-							bind:this={promptInput}
-							bind:value={input}
-							aria-label="terminal command"
-							autocomplete="off"
-							onkeydown={handlePromptKeydown}
-						/>
-					</label>
-				</form>
+				<PromptForm
+					cwd={formatPromptPath(cwd)}
+					bind:input
+					bind:inputRef={promptInput}
+					onKeydown={handlePromptKeydown}
+					onSubmit={submit}
+				/>
 			</div>
 		</article>
 		{#if sideReaderVisible}
-			<aside class="side-reader pane active">
-				<div class="pane-chrome">
-					<span class="pane-title">{selectedPost.title}</span>
-					<button
-						type="button"
-						class="close-pane"
-						aria-label="close side reader"
-						onclick={() => (sideReaderVisible = false)}
-					>
-						×
-					</button>
-					<span class="pane-title-spacer"></span>
-				</div>
-				<div class="side-reader-content">
-					<header class="side-post-header">
-						<h1>{selectedPost.title}</h1>
-						<div class="post-meta">
-							<span>{selectedPost.date}</span>
-							{#each selectedPost.tags as tag (tag)}
-								<span>#{tag}</span>
-							{/each}
-						</div>
-					</header>
-					<div class="markdown">
-						{#each sidePostBlocks as block, blockIndex (blockIndex)}
-							{#if block.type === 'heading'}
-								<svelte:element this={`h${Math.min(block.level, 3)}`}>{block.text}</svelte:element>
-							{:else if block.type === 'paragraph'}
-								<p>{block.text}</p>
-							{:else if block.type === 'list'}
-								<ul>
-									{#each block.items as item (item)}
-										<li>{item}</li>
-									{/each}
-								</ul>
-							{:else if block.type === 'quote'}
-								<blockquote>{block.text}</blockquote>
-							{:else if block.type === 'code'}
-								<div class="bat">
-									<HighlightedCode html={block.html} />
-								</div>
-							{:else}
-								<hr />
-							{/if}
-						{/each}
-					</div>
-				</div>
-			</aside>
+			<SideReader
+				post={selectedPost}
+				blocks={sidePostBlocks}
+				onClose={() => (sideReaderVisible = false)}
+			/>
 		{/if}
 	</section>
 </main>
