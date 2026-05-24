@@ -23,6 +23,7 @@
 	import PostReader from '$lib/terminal/components/PostReader.svelte';
 	import PromptForm from '$lib/terminal/components/PromptForm.svelte';
 	import RouteLinks from '$lib/terminal/components/RouteLinks.svelte';
+	import SocialLinks from '$lib/terminal/components/SocialLinks.svelte';
 	import WelcomeBanner from '$lib/terminal/components/WelcomeBanner.svelte';
 
 	const ABOUT_MARKDOWN = `# About
@@ -179,6 +180,11 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 				'  stack: SvelteKit, TypeScript, Flexoki, Sarasa SC Mono Nerd Font',
 				'  focus: Rust, CTF notes, web development, and MUN'
 			]);
+			return;
+		}
+
+		if (name === 'links') {
+			history = [...history, { kind: 'socials' }];
 			return;
 		}
 
@@ -455,6 +461,8 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 							</div>
 						{:else if line.kind === 'links'}
 							<RouteLinks path={line.path} entries={childLinks(line.path)} />
+						{:else if line.kind === 'socials'}
+							<SocialLinks />
 						{:else if line.kind === 'banner'}
 							<WelcomeBanner {posts} />
 						{:else if line.kind === 'help'}

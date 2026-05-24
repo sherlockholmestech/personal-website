@@ -5,6 +5,7 @@ export type ShellLine =
 	| { kind: Exclude<LineKind, 'prompt'>; text: string }
 	| { kind: 'prompt'; command: string; cwd: string }
 	| { kind: 'links'; path: string }
+	| { kind: 'socials' }
 	| { kind: 'banner' }
 	| { kind: 'help' }
 	| { kind: 'markdown'; markdown: string };

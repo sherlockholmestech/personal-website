@@ -26,6 +26,11 @@ export const commandCatalog: CommandHelp[] = [
 		group: 'start'
 	},
 	{
+		command: 'links',
+		description: 'Show social links.',
+		group: 'start'
+	},
+	{
 		command: 'blog [query]',
 		description: 'Browse posts with search, sort, and markdown preview.',
 		group: 'blog'
@@ -67,5 +72,5 @@ export const commandCatalog: CommandHelp[] = [
 	}
 ];
 
-export const helpfulCommands = ['blog', 'about', 'help', 'theme light', 'clear'];
+export const helpfulCommands = ['blog', 'about', 'links', 'help', 'theme light', 'clear'];
 export const commandExamples = commandCatalog.map((entry) => entry.command);

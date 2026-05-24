@@ -590,19 +590,41 @@ button {
 	border-bottom: 1px solid var(--border);
 }
 
-.route-links {
+.route-links,
+.social-links {
 	display: grid;
 	gap: 4px;
-	margin: 12px 0;
+	margin: 4px 0 14px;
 }
 
-.route-links a {
+.route-links a,
+.social-links a {
 	color: var(--cyan);
 	text-decoration: none;
 }
 
-.route-links a:hover {
+.route-links a:hover,
+.social-links a:hover {
 	color: var(--yellow);
+}
+
+.social-links a {
+	display: grid;
+	grid-template-columns: 10ch minmax(0, 1fr);
+	gap: 10px;
+	line-height: 1.45;
+}
+
+.social-links-title {
+	color: var(--green);
+	font-weight: 700;
+	line-height: 1.45;
+}
+
+.social-links strong {
+	min-width: 0;
+	font-weight: 400;
+	overflow-wrap: anywhere;
 }
 
 .post-reader {
