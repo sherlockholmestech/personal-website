@@ -14,7 +14,14 @@ export function parseMarkdown(
 			return [{ type: 'paragraph', text: token.text }];
 		}
 		if (token.type === 'list') {
-			return [{ type: 'list', items: token.items.map((item: Tokens.ListItem) => item.text) }];
+			const items = token.items.map((item: Tokens.ListItem) => item.text);
+			return [
+				{
+					type: 'list',
+					items: items.map((item) => item.replace(/^\s*\d+\.\s+/, '')),
+					ordered: token.ordered
+				}
+			];
 		}
 		if (token.type === 'code') {
 			const code = token as Tokens.Code;

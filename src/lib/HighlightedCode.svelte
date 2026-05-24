@@ -9,4 +9,4 @@
 	});
 </script>
 
-<div bind:this={container}></div>
+<div class="bat-code" bind:this={container}></div>

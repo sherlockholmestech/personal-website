@@ -1,5 +1,6 @@
 <script lang="ts">
 	import HighlightedCode from '$lib/HighlightedCode.svelte';
+	import { formatPostDate } from '../date';
 	import type { BlogPost, MdBlock } from '../types';
 
 	let {
@@ -17,8 +18,11 @@
 	{#if block.type === 'heading'}
 		<svelte:element this={`h${Math.min(block.level, 3)}`}>{block.text}</svelte:element>
 		{#if showHeadingMeta && blockIndex === 0 && post}
+			{#if post.description}
+				<p class="post-description">{post.description}</p>
+			{/if}
 			<div class="post-title-meta">
-				<span>{post.date}</span>
+				<span>{formatPostDate(post.date)}</span>
 				{#each post.tags as tag (tag)}
 					<span>#{tag}</span>
 				{/each}
@@ -27,16 +31,26 @@
 	{:else if block.type === 'paragraph'}
 		<p>{block.text}</p>
 	{:else if block.type === 'list'}
-		<ul>
+		<svelte:element this={block.ordered ? 'ol' : 'ul'}>
 			{#each block.items as item (item)}
 				<li>{item}</li>
 			{/each}
-		</ul>
+		</svelte:element>
 	{:else if block.type === 'quote'}
 		<blockquote>{block.text}</blockquote>
 	{:else if block.type === 'code'}
 		<div class="bat">
-			<HighlightedCode html={block.html} />
+			<div class="bat-header"><span>{block.language}</span></div>
+			<div class="bat-body">
+				<ol class="bat-lines" aria-hidden="true">
+					{#each block.code.split('\n') as _, index (index)}
+						<li>{index + 1}</li>
+					{/each}
+				</ol>
+				<div class="bat-code">
+					<HighlightedCode html={block.html} />
+				</div>
+			</div>
 		</div>
 	{:else}
 		<hr />

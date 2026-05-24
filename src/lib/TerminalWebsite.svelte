@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
-	import { commandExamples } from '$lib/terminal/help';
 	import {
 		buildTree,
 		createFileSystem,
@@ -14,13 +13,24 @@
 		toHomeRelative
 	} from '$lib/terminal/filesystem';
 	import { highlightMarkdownCode, parseMarkdown } from '$lib/terminal/markdown';
-	import { searchPosts } from '$lib/terminal/search';
-	import type { BlogPost, ShellLine, Theme } from '$lib/terminal/types';
+	import { searchPosts, sortPosts } from '$lib/terminal/search';
+	import type { BlogPost, BlogSort, ShellLine, Theme } from '$lib/terminal/types';
 	import BlogBrowser from '$lib/terminal/components/BlogBrowser.svelte';
+	import HelpPanel from '$lib/terminal/components/HelpPanel.svelte';
 	import InlinePost from '$lib/terminal/components/InlinePost.svelte';
+	import MarkdownBlocks from '$lib/terminal/components/MarkdownBlocks.svelte';
 	import PromptForm from '$lib/terminal/components/PromptForm.svelte';
 	import RouteLinks from '$lib/terminal/components/RouteLinks.svelte';
 	import SideReader from '$lib/terminal/components/SideReader.svelte';
+	import WelcomeBanner from '$lib/terminal/components/WelcomeBanner.svelte';
+
+	const ABOUT_MARKDOWN = `# About
+
+Hello! I'm Sherlock, an average programmer that enjoys CTFs as a side quest.
+
+You can also find me in the Model United Nations circuit occasionally.
+
+I primarily program in Rust, though I have dipped my toes (maybe a bit too much) into web development.`;
 
 	let { data }: { data: { posts: BlogPost[]; requestedPath?: string; notFound?: boolean } } =
 		$props();
@@ -30,18 +40,13 @@
 
 	let input = $state('');
 	let cwd = $state(HOME_DIRECTORY);
-	let history = $state<ShellLine[]>([
-		{ kind: 'success', text: 'Welcome to my terminal website.' },
-		{
-			kind: 'muted',
-			text: 'Type `help` to list commands, or `cat ~/blog/2026/ctf/defcon.md` to read a post.'
-		}
-	]);
+	let history = $state<ShellLine[]>([{ kind: 'banner' }]);
 	let selectedPath = $state('');
 	let sideReaderVisible = $state(false);
 	let blogBrowserVisible = $state(false);
 	let fzfQuery = $state('');
 	let fzfIndex = $state(0);
+	let blogSort = $state<BlogSort>('date-desc');
 	let routeInitialized = $state(false);
 	let theme = $state<Theme>('dark');
 	let terminalViewport: HTMLDivElement;
@@ -55,6 +60,7 @@
 			posts[0] ?? {
 				path: '',
 				title: '',
+				description: '',
 				date: '',
 				tags: [],
 				markdown: ''
@@ -64,7 +70,9 @@
 	let sidePostBlocks = $derived(
 		parsedPost.filter((block, index) => !(index === 0 && block.type === 'heading'))
 	);
-	let fzfResults = $derived(searchPosts(posts, fzfQuery));
+	let fzfResults = $derived(sortPosts(searchPosts(posts, fzfQuery), blogSort));
+	let browserSelectedPost = $derived(fzfResults[fzfIndex] ?? selectedPost);
+	let browserPreviewBlocks = $derived(postBlocks(browserSelectedPost));
 
 	$effect(() => {
 		if (!selectedPath && posts.length) {
@@ -116,13 +124,6 @@
 		}
 	}
 
-	async function copySelection() {
-		const selectedText = globalThis.getSelection()?.toString().trim();
-		if (!selectedText) return;
-
-		await navigator.clipboard?.writeText(selectedText);
-	}
-
 	async function submit() {
 		const command = input.trim();
 		if (!command) return;
@@ -153,6 +154,11 @@
 			return;
 		}
 
+		if (name === 'banner') {
+			history = [...history, { kind: 'banner' }];
+			return;
+		}
+
 		if (name === 'pwd') {
 			print([cwd || ROOT_DIRECTORY]);
 			return;
@@ -164,30 +170,21 @@
 		}
 
 		if (name === 'help') {
-			print([
-				'Commands:',
-				...commandExamples.map((entry) => `  ${entry}`),
-				'',
-				'Unix tips: `ls` lists directories, `cat` reads files, `cd` accepts absolute or ~/ paths.'
-			]);
+			history = [...history, { kind: 'help' }];
 			return;
 		}
 
 		if (name === 'about') {
-			print([
-				'About',
-				'  I build security-focused software, terminal tools, and write CTF notes.',
-				'  This site behaves like a tiny multiplexer for posts, links, and experiments.'
-			]);
+			history = [...history, { kind: 'markdown', markdown: ABOUT_MARKDOWN }];
 			return;
 		}
 
 		if (name === 'info') {
 			print([
-				'Info',
+				'Sherlock Holmes',
+				'  site: personal blog in a terminal shell',
 				'  stack: SvelteKit, TypeScript, Flexoki, Sarasa SC Mono Nerd Font',
-				'  links: github / blog / contact placeholders',
-				'  focus: security, systems, web, and terminal-first workflows'
+				'  focus: Rust, CTF notes, web development, and MUN'
 			]);
 			return;
 		}
@@ -203,12 +200,12 @@
 		}
 
 		if (name === 'blog') {
+			fzfQuery = target;
 			void openBlogSearch();
-			print(['opened blog browser'], 'success');
 			return;
 		}
 
-		if (name === 'cat' || name === 'open') {
+		if (name === 'cat') {
 			openPost(target, name);
 			return;
 		}
@@ -362,6 +359,14 @@
 		selectedPath = fzfResults[0]?.path ?? selectedPath;
 	}
 
+	function handleBlogSortChange(nextSort: BlogSort) {
+		blogSort = nextSort;
+		const nextResults = sortPosts(searchPosts(posts, fzfQuery), nextSort);
+		fzfIndex = 0;
+		selectedPath = nextResults[0]?.path ?? selectedPath;
+		fzfInput?.focus();
+	}
+
 	function selectFzfResult(index: number) {
 		fzfIndex = index;
 		selectedPath = fzfResults[index]?.path ?? selectedPath;
@@ -406,10 +411,10 @@
 </script>
 
 <svelte:head>
-	<title>personal-website</title>
+	<title>Sherlock Holmes</title>
 	<meta
 		name="description"
-		content="A terminal multiplexer inspired personal website with blog posts as folders."
+		content="Sherlock Holmes' terminal-style personal blog on CTFs, Rust, web development, and Model United Nations."
 	/>
 </svelte:head>
 
@@ -417,7 +422,7 @@
 	<section class:side-open={sideReaderVisible} class="panes">
 		<article class="pane shell-pane active">
 			<div class="pane-chrome">
-				<span class="pane-title">Terminal-Style Personal Website</span>
+				<span class="pane-title">Sherlock Holmes // personal blog</span>
 			</div>
 			<div
 				bind:this={terminalViewport}
@@ -425,7 +430,6 @@
 				aria-live="polite"
 				role="application"
 				onpointerdown={focusPrompt}
-				onpointerup={copySelection}
 			>
 				{#each history as line, index (index)}
 					{#if line.kind === 'prompt'}
@@ -446,6 +450,16 @@
 						{/if}
 					{:else if line.kind === 'links'}
 						<RouteLinks path={line.path} entries={childLinks(line.path)} />
+					{:else if line.kind === 'banner'}
+						<WelcomeBanner />
+					{:else if line.kind === 'help'}
+						<HelpPanel />
+					{:else if line.kind === 'markdown'}
+						<div class="inline-reader markdown-message">
+							<div class="markdown">
+								<MarkdownBlocks blocks={parseMarkdown(line.markdown, {})} />
+							</div>
+						</div>
 					{:else}
 						<pre class={line.kind}>{line.text}</pre>
 					{/if}
@@ -458,9 +472,12 @@
 						{posts}
 						results={fzfResults}
 						selectedIndex={fzfIndex}
-						{selectedPost}
+						selectedPost={browserSelectedPost}
+						previewBlocks={browserPreviewBlocks}
+						sort={blogSort}
 						onQueryInput={handleQueryInput}
 						onKeydown={handleFzfKeydown}
+						onSortChange={handleBlogSortChange}
 						onSelect={selectFzfResult}
 						onOpen={openFzfSelection}
 					/>
