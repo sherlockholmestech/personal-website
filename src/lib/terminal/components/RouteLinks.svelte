@@ -7,7 +7,7 @@
 	}: { path: string; entries: { name: string; directory: boolean; url: string }[] } = $props();
 </script>
 
-<div class="grid gap-[4px] my-[4px] mb-[14px]">
+<div class="my-[4px] mb-[14px] grid gap-[4px]">
 	<div class="flex flex-wrap gap-[5px] px-[14px] pt-[6px] text-[15px] text-[var(--tx-2)]">
 		<span class="text-[var(--green)]">listing</span>
 		<span>{path}</span>
@@ -17,7 +17,8 @@
 			href={resolve(entry.url as `/blog/${string}`)}
 			class="text-[var(--cyan)] no-underline hover:text-[var(--yellow)]"
 		>
-			{entry.directory ? '' : ''} {entry.name}
+			{entry.directory ? '' : ''}
+			{entry.name}
 		</a>
 	{/each}
 </div>

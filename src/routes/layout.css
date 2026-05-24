@@ -52,8 +52,8 @@
 
 	:root {
 		font-family:
-			'Sarasa SC Mono Nerd Font', ui-monospace, 'SFMono-Regular', Consolas,
-			'Liberation Mono', monospace;
+			'Sarasa SC Mono Nerd Font', ui-monospace, 'SFMono-Regular', Consolas, 'Liberation Mono',
+			monospace;
 		font-size: 16px;
 		color: #cecdc3;
 		background: #100f0f;
@@ -64,8 +64,8 @@
 	* {
 		box-sizing: border-box;
 		font-family:
-			'Sarasa SC Mono Nerd Font', ui-monospace, 'SFMono-Regular', Consolas,
-			'Liberation Mono', monospace !important;
+			'Sarasa SC Mono Nerd Font', ui-monospace, 'SFMono-Regular', Consolas, 'Liberation Mono',
+			monospace !important;
 	}
 
 	html,

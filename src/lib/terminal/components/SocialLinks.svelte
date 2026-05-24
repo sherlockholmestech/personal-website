@@ -7,8 +7,8 @@
 	];
 </script>
 
-<div class="grid gap-[4px] my-[4px] mb-[14px]">
-	<div class="text-[var(--green)] font-bold leading-[1.45]">socials</div>
+<div class="my-[4px] mb-[14px] grid gap-[4px]">
+	<div class="leading-[1.45] font-bold text-[var(--green)]">socials</div>
 	{#each links as link (link.url)}
 		<a
 			href={link.url}

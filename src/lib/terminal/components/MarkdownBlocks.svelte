@@ -27,11 +27,13 @@
 		</svelte:element>
 		{#if showHeadingMeta && blockIndex === 0 && post}
 			{#if post.description}
-				<p class="my-[10px] mb-[12px] max-w-[80ch] text-justify text-[var(--tx-2)] [text-justify:inter-word] max-[760px]:max-w-none max-[760px]:text-left">
+				<p
+					class="my-[10px] mb-[12px] max-w-[80ch] text-justify text-[var(--tx-2)] [text-justify:inter-word] max-[760px]:max-w-none max-[760px]:text-left"
+				>
 					{post.description}
 				</p>
 			{/if}
-			<div class="flex flex-wrap gap-[8px] my-[-6px] mb-[16px] text-[var(--tx-2)]">
+			<div class="my-[-6px] mb-[16px] flex flex-wrap gap-[8px] text-[var(--tx-2)]">
 				<span>{formatPostDate(post.date)}</span>
 				{#each post.tags as tag (tag)}
 					<span>#{tag}</span>
@@ -49,22 +51,26 @@
 	{:else if block.type === 'quote'}
 		<blockquote>{@html block.html}</blockquote>
 	{:else if block.type === 'code'}
-		<div class="my-[14px] overflow-hidden border-b border-[var(--border)] bg-[var(--bg)] max-[760px]:mx-[-2px]">
-			<div class="relative flex items-center justify-end px-[12px] py-[8px] text-[12px] lowercase leading-none text-[var(--tx-2)] before:absolute before:inset-x-0 before:bottom-0 before:h-px before:bg-[var(--border)]">
+		<div
+			class="my-[14px] overflow-hidden border-b border-[var(--border)] bg-[var(--bg)] max-[760px]:mx-[-2px]"
+		>
+			<div
+				class="relative flex items-center justify-end px-[12px] py-[8px] text-[12px] leading-none text-[var(--tx-2)] lowercase before:absolute before:inset-x-0 before:bottom-0 before:h-px before:bg-[var(--border)]"
+			>
 				<span class="relative bg-[var(--bg)] px-[6px] text-[var(--yellow)]">{block.language}</span>
 			</div>
 			<div class="grid grid-cols-[calc(5ch_+_20px)_minmax(0,1fr)] items-start">
 				<ol
-					class="m-0 list-none border-r border-[var(--border)] py-[10px] pr-[8px] pl-[12px] text-right text-[var(--tx-2)] tabular-nums justify-self-stretch"
+					class="m-0 list-none justify-self-stretch border-r border-[var(--border)] py-[10px] pr-[8px] pl-[12px] text-right text-[var(--tx-2)] tabular-nums"
 					aria-hidden="true"
 				>
 					{#each lineNumbers(block.code) as line (line)}
-						<li class="m-0 whitespace-nowrap leading-[1.45]">{line}</li>
+						<li class="m-0 leading-[1.45] whitespace-nowrap">{line}</li>
 					{/each}
 				</ol>
 				<HighlightedCode
 					html={block.html}
-					class="min-w-0 [&_pre]:m-0 [&_pre]:overflow-x-auto [&_pre]:bg-transparent [&_pre]:p-[10px_12px] [&_code]:block [&_code]:bg-transparent [&_code]:text-[16px] [&_code]:leading-[1.45] max-[760px]:[&_pre]:px-[8px]"
+					class="min-w-0 [&_code]:block [&_code]:bg-transparent [&_code]:text-[16px] [&_code]:leading-[1.45] [&_pre]:m-0 [&_pre]:overflow-x-auto [&_pre]:bg-transparent [&_pre]:p-[10px_12px] max-[760px]:[&_pre]:px-[8px]"
 				/>
 			</div>
 		</div>
