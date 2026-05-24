@@ -70,9 +70,7 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 			}
 	);
 	let parsedPost = $derived(parseMarkdown(selectedPost.markdown, highlightedCode));
-	let postViewBlocks = $derived(
-		parsedPost.filter((block, index) => !(index === 0 && block.type === 'heading'))
-	);
+	let postViewBlocks = $derived(parsedPost);
 	let fzfResults = $derived(sortPosts(searchPosts(posts, fzfQuery), blogSort));
 	let browserSelectedPost = $derived(fzfResults[fzfIndex] ?? selectedPost);
 	let browserPreviewBlocks = $derived(postBlocks(browserSelectedPost));
