@@ -503,9 +503,10 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 											{line.cwd}
 										</span>
 									</div>
-									<pre class="terminal-prompt-line">
-										<span class="text-[var(--yellow)]">❯</span> {line.command}
-									</pre>
+									<div class="terminal-prompt-line">
+										<span class="text-[var(--yellow)]">❯</span>
+										<span>{line.command}</span>
+									</div>
 								</div>
 							{:else if line.kind === 'links'}
 								<RouteLinks path={line.path} entries={childLinks(line.path)} />

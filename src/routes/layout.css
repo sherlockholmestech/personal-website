@@ -144,7 +144,7 @@
 	}
 
 	.terminal-prompt-line {
-		@apply m-0 flex items-center gap-2 text-[15px] leading-[1.45] whitespace-pre-wrap max-[760px]:text-[16px];
+		@apply m-0 flex items-baseline gap-2 text-[15px] leading-[1.45] whitespace-pre-wrap max-[760px]:text-[16px];
 	}
 
 	.terminal-output-line {
