@@ -442,26 +442,26 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 
 <main
 	class:light={theme === 'light'}
-	class="workspace flex h-screen min-h-screen w-screen flex-col overflow-hidden bg-[var(--bg)] text-[var(--tx)] max-[760px]:h-[100dvh]"
+	class="workspace terminal-workspace"
 >
 	<section
-		class="grid min-h-0 flex-1 grid-cols-1 bg-[var(--bg)] p-[14px] max-[760px]:px-[12px] max-[760px]:pt-[26px] max-[760px]:pb-[12px]"
+		class="terminal-shell"
 	>
 		<article
-			class="relative mx-[1px] flex min-h-0 min-w-0 flex-col rounded-[5px] border-2 border-[var(--yellow)] bg-[var(--bg)] text-[15px] max-[760px]:mx-0 max-[760px]:rounded-[3px] max-[760px]:border max-[760px]:text-[16px]"
+			class="terminal-window"
 		>
 			<div
-				class="absolute top-0 right-2 left-2 z-20 flex -translate-y-1/2 items-center gap-[6px] text-[15px] leading-[1.2] max-[760px]:z-30 max-[760px]:gap-2 max-[760px]:text-[13px]"
+				class="terminal-titlebar"
 			>
 				<span
-					class="inline-flex max-w-[75%] overflow-hidden bg-[var(--bg)] px-[7px] font-bold text-ellipsis whitespace-nowrap text-[var(--yellow)] max-[760px]:max-w-[calc(100%_-_42px)] max-[760px]:pt-[2px] max-[760px]:pb-[3px] max-[760px]:leading-[1.2]"
+					class="terminal-title"
 				>
 					{currentView === 'post' ? selectedPost.title : 'Sherlock Holmes // personal blog'}
 				</span>
 				{#if currentView === 'post'}
 					<button
 						type="button"
-						class="ml-auto inline-flex h-[20px] w-[20px] flex-none cursor-pointer items-center justify-center rounded-none border border-[var(--border)] bg-[var(--bg)] leading-none font-bold text-[var(--red)] max-[760px]:h-[24px] max-[760px]:w-[24px] max-[760px]:text-[12px]"
+						class="terminal-close-button"
 						aria-label="close blog reader"
 						onclick={closePostView}
 					>
@@ -474,7 +474,7 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 			{:else}
 				<div
 					bind:this={terminalViewport}
-					class="flex min-h-0 flex-1 [scrollbar-width:thin] [scrollbar-color:var(--border)_transparent] overflow-auto px-[14px] pt-[7px] pb-[8px] max-[760px]:px-[9px] max-[760px]:pt-[12px] max-[760px]:pb-[9px]"
+					class="terminal-viewport"
 					aria-live="polite"
 					role="application"
 					onpointerdown={focusPrompt}
@@ -490,7 +490,7 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 									</span>
 								</div>
 								<pre
-									class="m-0 flex items-center gap-2 text-[15px] leading-[1.45] whitespace-pre-wrap max-[760px]:text-[16px]">
+									class="terminal-prompt-line">
 									<span class="text-[var(--yellow)]">❯</span> {line.command}
 								</pre>
 							</div>
@@ -505,14 +505,14 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 						{:else if line.kind === 'markdown'}
 							<div class="mt-3 border-b border-[var(--border)]">
 								<div
-									class="mx-auto prose max-w-[86ch] text-[16px] leading-[1.58] text-[var(--tx)] max-[760px]:max-w-full max-[760px]:text-[clamp(16px,4vw,18px)] max-[760px]:leading-[1.62] prose-headings:mt-0 prose-headings:mb-[12px] prose-headings:leading-[1.15] prose-headings:font-bold prose-h1:text-[26px] prose-h1:text-[var(--yellow)] max-[760px]:prose-h1:text-[clamp(22px,6vw,26px)] prose-h2:mt-[20px] prose-h2:text-[19px] prose-h2:text-[var(--orange)] max-[760px]:prose-h2:text-[clamp(18px,5vw,22px)] prose-h3:mt-[16px] prose-h3:text-[17px] prose-h3:text-[var(--green)] max-[760px]:prose-h3:text-[clamp(17px,4.6vw,20px)] prose-p:mb-[16px] prose-p:text-justify prose-p:whitespace-pre-line prose-p:[text-justify:inter-word] max-[760px]:prose-p:text-left max-[760px]:prose-p:[overflow-wrap:anywhere] prose-blockquote:mb-[16px] prose-blockquote:border-l-4 prose-blockquote:border-[var(--cyan)] prose-blockquote:bg-[var(--bg-2)] prose-blockquote:px-[12px] prose-blockquote:py-[8px] prose-blockquote:text-justify prose-blockquote:font-normal prose-blockquote:whitespace-pre-line prose-blockquote:text-[var(--tx)] prose-blockquote:not-italic prose-blockquote:[text-justify:inter-word] prose-blockquote:before:content-none prose-blockquote:after:content-none max-[760px]:prose-blockquote:text-left max-[760px]:prose-blockquote:[overflow-wrap:anywhere] prose-strong:font-bold prose-strong:text-[var(--yellow)] prose-em:text-[var(--cyan)] prose-em:italic prose-code:rounded-none prose-code:bg-[var(--bg-2)] prose-code:px-[4px] prose-code:py-0 prose-code:text-[var(--yellow)] prose-code:before:content-none prose-code:after:content-none prose-ol:list-decimal prose-ol:pl-[24px] prose-ul:mb-[16px] prose-ul:list-disc prose-ul:pl-[24px] prose-li:mb-[8px] prose-li:text-justify prose-li:whitespace-pre-line prose-li:[text-justify:inter-word] prose-li:marker:text-[var(--yellow)] max-[760px]:prose-li:text-left max-[760px]:prose-li:[overflow-wrap:anywhere] prose-img:mx-auto prose-img:my-[14px] prose-img:mb-[18px] prose-img:border prose-img:border-[var(--border)] prose-hr:my-[18px] prose-hr:border-t prose-hr:border-[var(--border)]"
+									class="terminal-prose terminal-prose-body"
 								>
 									<MarkdownBlocks blocks={parseMarkdown(line.markdown, {})} />
 								</div>
 							</div>
 						{:else}
 							<pre
-								class={`m-0 text-[15px] leading-[1.34] whitespace-pre-wrap max-[760px]:text-[16px] ${line.kind === 'success' ? 'text-[var(--green)]' : line.kind === 'error' ? 'text-[var(--red)]' : line.kind === 'muted' ? 'text-[var(--tx-2)]' : ''}`}>
+								class={`terminal-output-line ${line.kind === 'success' ? 'text-[var(--green)]' : line.kind === 'error' ? 'text-[var(--red)]' : line.kind === 'muted' ? 'text-[var(--tx-2)]' : ''}`}>
 								{line.text}
 							</pre>
 						{/if}
@@ -537,13 +537,13 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 					{/if}
 
 					<div
-						class="hidden max-[760px]:sticky max-[760px]:bottom-0 max-[760px]:z-[4] max-[760px]:mx-[-2px] max-[760px]:mt-[12px] max-[760px]:flex max-[760px]:flex-wrap max-[760px]:gap-[6px] max-[760px]:bg-[color-mix(in_srgb,_var(--bg)_92%,_transparent)] max-[760px]:py-[7px] max-[760px]:pb-[4px]"
+						class="terminal-shortcuts"
 						aria-label="quick commands"
 					>
 						{#each mobileShortcuts as command (command)}
 							<button
 								type="button"
-								class="min-h-[32px] cursor-pointer border border-[var(--border)] bg-[var(--bg)] px-[8px] py-[3px] text-[var(--yellow)]"
+								class="terminal-shortcut-button"
 								onclick={() => runShortcut(command)}
 							>
 								{command}
