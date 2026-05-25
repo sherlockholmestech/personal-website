@@ -1,0 +1,39 @@
+@font-face {
+	font-family: 'Sarasa SC Mono Nerd Font';
+	src: url('/fonts/sarasa-mono-sc-italic-nerd-font.woff2') format('woff2');
+	font-weight: 400;
+	font-style: italic;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Sarasa SC Mono Nerd Font';
+	src: url('/fonts/sarasa-mono-sc-semibold-nerd-font.woff2') format('woff2');
+	font-weight: 600;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Sarasa SC Mono Nerd Font';
+	src: url('/fonts/sarasa-mono-sc-semibolditalic-nerd-font.woff2') format('woff2');
+	font-weight: 600;
+	font-style: italic;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Sarasa SC Mono Nerd Font';
+	src: url('/fonts/sarasa-mono-sc-bold-nerd-font.woff2') format('woff2');
+	font-weight: 700;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Sarasa SC Mono Nerd Font';
+	src: url('/fonts/sarasa-mono-sc-bolditalic-nerd-font.woff2') format('woff2');
+	font-weight: 700;
+	font-style: italic;
+	font-display: swap;
+}

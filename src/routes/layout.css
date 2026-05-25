@@ -10,46 +10,6 @@
 		font-display: swap;
 	}
 
-	@font-face {
-		font-family: 'Sarasa SC Mono Nerd Font';
-		src: url('/fonts/sarasa-mono-sc-italic-nerd-font.woff2') format('woff2');
-		font-weight: 400;
-		font-style: italic;
-		font-display: swap;
-	}
-
-	@font-face {
-		font-family: 'Sarasa SC Mono Nerd Font';
-		src: url('/fonts/sarasa-mono-sc-semibold-nerd-font.woff2') format('woff2');
-		font-weight: 600;
-		font-style: normal;
-		font-display: swap;
-	}
-
-	@font-face {
-		font-family: 'Sarasa SC Mono Nerd Font';
-		src: url('/fonts/sarasa-mono-sc-semibolditalic-nerd-font.woff2') format('woff2');
-		font-weight: 600;
-		font-style: italic;
-		font-display: swap;
-	}
-
-	@font-face {
-		font-family: 'Sarasa SC Mono Nerd Font';
-		src: url('/fonts/sarasa-mono-sc-bold-nerd-font.woff2') format('woff2');
-		font-weight: 700;
-		font-style: normal;
-		font-display: swap;
-	}
-
-	@font-face {
-		font-family: 'Sarasa SC Mono Nerd Font';
-		src: url('/fonts/sarasa-mono-sc-bolditalic-nerd-font.woff2') format('woff2');
-		font-weight: 700;
-		font-style: italic;
-		font-display: swap;
-	}
-
 	:root {
 		font-family:
 			'Sarasa SC Mono Nerd Font', ui-monospace, 'SFMono-Regular', Consolas, 'Liberation Mono',
@@ -201,6 +161,19 @@
 	.terminal-prose blockquote::before,
 	.terminal-prose blockquote::after {
 		content: none;
+	}
+
+	.terminal-prose a {
+		color: var(--blue);
+		text-decoration: underline;
+		text-decoration-color: color-mix(in srgb, var(--blue) 65%, transparent);
+		text-underline-offset: 3px;
+	}
+
+	.terminal-prose a:hover,
+	.terminal-prose a:focus-visible {
+		color: var(--cyan);
+		text-decoration-color: var(--cyan);
 	}
 
 	.terminal-prose p,
