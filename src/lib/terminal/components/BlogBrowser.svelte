@@ -76,14 +76,14 @@
 	}
 </script>
 
-<div class="fzf-browser">
-	<div class="fzf-header">
+<div class="blog-browser">
+	<div class="blog-browser-header">
 		<span>~/blog</span>
 		<span>{results.length}/{posts.length} posts</span>
 	</div>
-	<div class="fzf-controls">
-		<label class="fzf-search">
-			<span>query</span>
+	<div class="blog-browser-toolbar">
+		<label class="blog-browser-field blog-browser-field-query">
+			<span class="text-[var(--tx-2)]">query</span>
 			<input
 				bind:this={inputRef}
 				bind:value={query}
@@ -91,14 +91,15 @@
 				autocomplete="off"
 				oninput={onQueryInput}
 				onkeydown={onKeydown}
+				class="blog-browser-input"
 			/>
 		</label>
-		<label class="fzf-sort">
-			<span>sort</span>
-			<div class="fzf-select" onfocusout={handleSortFocusOut}>
+		<label class="blog-browser-field blog-browser-field-sort">
+			<span class="text-[var(--tx-2)]">sort</span>
+			<div class="relative min-w-0" onfocusout={handleSortFocusOut}>
 				<button
 					type="button"
-					class="fzf-select-trigger"
+					class="blog-browser-sort-button"
 					aria-haspopup="listbox"
 					aria-expanded={sortOpen}
 					aria-controls="fzf-sort-menu"
@@ -106,15 +107,14 @@
 					onkeydown={handleSortKeydown}
 				>
 					<span>{sortLabel}</span>
-					<span class="fzf-select-chevron" aria-hidden="true">v</span>
+					<span class="text-[12px] text-[var(--yellow)]" aria-hidden="true">v</span>
 				</button>
 				{#if sortOpen}
-					<div id="fzf-sort-menu" class="fzf-select-menu" role="listbox">
+					<div id="fzf-sort-menu" class="blog-browser-sort-menu" role="listbox">
 						{#each sortOptions as option (option.value)}
 							<button
 								type="button"
-								class="fzf-select-option"
-								class:selected={option.value === sort}
+								class={`blog-browser-sort-option ${option.value === sort ? 'bg-[var(--yellow)] text-[var(--bg)]' : 'text-[var(--tx)]'}`}
 								role="option"
 								aria-selected={option.value === sort}
 								onclick={() => selectSort(option.value)}
@@ -128,10 +128,10 @@
 			</div>
 		</label>
 	</div>
-	<div class="fzf-body">
-		<div class="fzf-results">
+	<div class="blog-browser-grid">
+		<div class="blog-browser-results" style="counter-reset: post-row">
 			{#if results.length}
-				<div class="fzf-table-head" aria-hidden="true">
+				<div class="blog-browser-results-header" aria-hidden="true">
 					<span>title</span>
 					<span>date</span>
 					<span>tags</span>
@@ -140,36 +140,46 @@
 				{#each results as post, index (post.path)}
 					<button
 						type="button"
-						class:selected={index === selectedIndex}
-						class="fzf-row"
+						class={`blog-browser-row ${index === selectedIndex ? 'bg-[var(--yellow)] text-[var(--bg)]' : 'text-[var(--tx)]'}`}
+						style="counter-increment: post-row"
 						onclick={() => handleResultClick(index)}
 						ondblclick={() => onOpen(index)}
 					>
-						<span class="fzf-title">{post.title}</span>
-						<span class="fzf-date">{formatPostDate(post.date)}</span>
-						<span class="fzf-tags">
+						<span
+							class="overflow-hidden [overflow-wrap:anywhere] text-ellipsis max-[760px]:pointer-events-none max-[760px]:font-bold"
+						>
+							{post.title}
+						</span>
+						<span class="opacity-[0.85] max-[760px]:pointer-events-none">
+							{formatPostDate(post.date)}
+						</span>
+						<span class="flex flex-wrap gap-[6px] opacity-[0.75] max-[760px]:pointer-events-none">
 							{#each post.tags as tag (tag)}
 								<span>#{tag}</span>
 							{/each}
 						</span>
-						<span class="fzf-path">{post.path}</span>
+						<span
+							class="[overflow-wrap:anywhere] opacity-[0.55] max-[760px]:pointer-events-none max-[760px]:before:content-['cat_']"
+						>
+							{post.path}
+						</span>
 					</button>
 				{/each}
 			{:else}
-				<div class="fzf-empty">no matching posts</div>
+				<div class="blog-browser-empty">no matching posts</div>
 			{/if}
 		</div>
-		<div class="fzf-preview">
+		<div class="blog-browser-preview">
 			{#if results.length}
-				<div class="fzf-preview-label">
+				<div class="blog-browser-preview-header">
 					<span>preview</span>
 					<span>cat {selectedPost.path}</span>
 				</div>
-				<div class="markdown fzf-preview-markdown">
+				<div class="terminal-prose terminal-prose-preview">
 					<MarkdownBlocks blocks={previewBlocks} post={selectedPost} showHeadingMeta />
 				</div>
 			{:else}
-				<div class="fzf-empty">adjust query or clear it to see posts</div>
+				<div class="blog-browser-empty">adjust query or clear it to see posts</div>
 			{/if}
 		</div>
 	</div>

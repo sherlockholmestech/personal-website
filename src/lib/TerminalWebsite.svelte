@@ -440,17 +440,17 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 	/>
 </svelte:head>
 
-<main class:light={theme === 'light'} class="workspace">
-	<section class="app-frame">
-		<article class="terminal-window active">
-			<div class="window-chrome">
-				<span class="window-title">
+<main class:light={theme === 'light'} class="workspace terminal-workspace">
+	<section class="terminal-shell">
+		<article class="terminal-window">
+			<div class="terminal-titlebar">
+				<span class="terminal-title">
 					{currentView === 'post' ? selectedPost.title : 'Sherlock Holmes // personal blog'}
 				</span>
 				{#if currentView === 'post'}
 					<button
 						type="button"
-						class="window-close"
+						class="terminal-close-button"
 						aria-label="close blog reader"
 						onclick={closePostView}
 					>
@@ -463,18 +463,24 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 			{:else}
 				<div
 					bind:this={terminalViewport}
-					class="terminal-output"
+					class="terminal-viewport"
 					aria-live="polite"
 					role="application"
 					onpointerdown={focusPrompt}
 				>
 					{#each history as line, index (index)}
 						{#if line.kind === 'prompt'}
-							<div class="prompt-block">
-								<div class="prompt-meta">
-									<span class="cwd">{line.cwd}</span>
+							<div class="mb-[14px]">
+								<div class="leading-[1.45] text-[var(--tx)]">
+									<span
+										class="text-[var(--cyan)] max-[760px]:text-[0px] max-[760px]:after:text-[16px] max-[760px]:after:content-['~']"
+									>
+										{line.cwd}
+									</span>
 								</div>
-								<pre class="prompt-command"><span class="chevron">❯</span> {line.command}</pre>
+								<pre class="terminal-prompt-line">
+									<span class="text-[var(--yellow)]">❯</span> {line.command}
+								</pre>
 							</div>
 						{:else if line.kind === 'links'}
 							<RouteLinks path={line.path} entries={childLinks(line.path)} />
@@ -485,13 +491,16 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 						{:else if line.kind === 'help'}
 							<HelpPanel />
 						{:else if line.kind === 'markdown'}
-							<div class="inline-reader markdown-message">
-								<div class="markdown">
+							<div class="mt-3 border-b border-[var(--border)]">
+								<div class="terminal-prose terminal-prose-body">
 									<MarkdownBlocks blocks={parseMarkdown(line.markdown, {})} />
 								</div>
 							</div>
 						{:else}
-							<pre class={line.kind}>{line.text}</pre>
+							<pre
+								class={`terminal-output-line ${line.kind === 'success' ? 'text-[var(--green)]' : line.kind === 'error' ? 'text-[var(--red)]' : line.kind === 'muted' ? 'text-[var(--tx-2)]' : ''}`}>
+								{line.text}
+							</pre>
 						{/if}
 					{/each}
 
@@ -513,9 +522,15 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 						/>
 					{/if}
 
-					<div class="mobile-command-bar" aria-label="quick commands">
+					<div class="terminal-shortcuts" aria-label="quick commands">
 						{#each mobileShortcuts as command (command)}
-							<button type="button" onclick={() => runShortcut(command)}>{command}</button>
+							<button
+								type="button"
+								class="terminal-shortcut-button"
+								onclick={() => runShortcut(command)}
+							>
+								{command}
+							</button>
 						{/each}
 					</div>
 

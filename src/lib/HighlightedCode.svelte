@@ -1,7 +1,7 @@
 <script lang="ts">
 	/* eslint-disable svelte/no-dom-manipulating */
 
-	let { html }: { html: string } = $props();
+	let { html, class: className = '' }: { html: string; class?: string } = $props();
 	let container = $state<HTMLDivElement>();
 
 	$effect(() => {
@@ -9,4 +9,4 @@
 	});
 </script>
 
-<div class="bat-code" bind:this={container}></div>
+<div class={`min-w-0 ${className}`} bind:this={container}></div>
