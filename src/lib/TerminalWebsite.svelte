@@ -83,7 +83,7 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 
 	onMount(async () => {
 		await tick();
-		promptInput?.focus();
+		focusPromptIfComfortable();
 	});
 
 	$effect(() => {
@@ -110,6 +110,7 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 	});
 
 	function focusPrompt(event: PointerEvent) {
+		if (shouldAvoidImplicitFocus()) return;
 		if (event.target instanceof HTMLInputElement) return;
 		if (event.target instanceof HTMLElement) {
 			const interactive = event.target.closest(
@@ -118,6 +119,22 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 			if (interactive) return;
 		}
 		promptInput?.focus();
+	}
+
+	function shouldAvoidImplicitFocus() {
+		return window.matchMedia('(max-width: 760px), (pointer: coarse)').matches;
+	}
+
+	function focusPromptIfComfortable() {
+		if (!shouldAvoidImplicitFocus()) {
+			promptInput?.focus();
+		}
+	}
+
+	function focusBlogSearchIfComfortable() {
+		if (!shouldAvoidImplicitFocus()) {
+			fzfInput?.focus();
+		}
 	}
 
 	function handlePromptKeydown(event: KeyboardEvent) {
@@ -320,7 +337,7 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 			fzfResults.findIndex((post) => post.path === selectedPath)
 		);
 		await tick();
-		fzfInput?.focus();
+		focusBlogSearchIfComfortable();
 	}
 
 	function moveFzfSelection(delta: number) {
@@ -337,7 +354,12 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 		currentView = 'post';
 		blogBrowserVisible = false;
 		void updateUrlForView(post.path);
-		promptInput?.focus();
+		focusPromptIfComfortable();
+	}
+
+	function closeBlogSearch() {
+		blogBrowserVisible = false;
+		focusPromptIfComfortable();
 	}
 
 	function closePostView() {
@@ -361,7 +383,7 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 		if (event.key === 'Escape') {
 			event.preventDefault();
 			blogBrowserVisible = false;
-			promptInput?.focus();
+			focusPromptIfComfortable();
 		}
 	}
 
@@ -375,13 +397,13 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 		const nextResults = sortPosts(searchPosts(posts, fzfQuery), nextSort);
 		fzfIndex = 0;
 		selectedPath = nextResults[0]?.path ?? selectedPath;
-		fzfInput?.focus();
+		focusBlogSearchIfComfortable();
 	}
 
 	function selectFzfResult(index: number) {
 		fzfIndex = index;
 		selectedPath = fzfResults[index]?.path ?? selectedPath;
-		fzfInput?.focus();
+		focusBlogSearchIfComfortable();
 	}
 
 	function postBlocks(post: BlogPost) {
@@ -462,45 +484,46 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 				<PostReader post={selectedPost} blocks={postViewBlocks} />
 			{:else}
 				<div
-					bind:this={terminalViewport}
 					class="terminal-viewport"
 					aria-live="polite"
 					role="application"
 					onpointerdown={focusPrompt}
 				>
-					{#each history as line, index (index)}
-						{#if line.kind === 'prompt'}
-							<div class="mb-[14px]">
-								<div class="leading-[1.45] text-[var(--tx)]">
-									<span
-										class="text-[var(--cyan)] max-[760px]:text-[0px] max-[760px]:after:text-[16px] max-[760px]:after:content-['~']"
-									>
-										{line.cwd}
-									</span>
+					<div bind:this={terminalViewport} class="terminal-scrollback">
+						{#each history as line, index (index)}
+							{#if line.kind === 'prompt'}
+								<div class="mb-[14px]">
+									<div class="leading-[1.45] text-[var(--tx)]">
+										<span
+											class="text-[var(--cyan)] max-[760px]:text-[0px] max-[760px]:after:text-[16px] max-[760px]:after:content-['~']"
+										>
+											{line.cwd}
+										</span>
+									</div>
+									<pre class="terminal-prompt-line">
+										<span class="text-[var(--yellow)]">❯</span> {line.command}
+									</pre>
 								</div>
-								<pre class="terminal-prompt-line">
-									<span class="text-[var(--yellow)]">❯</span> {line.command}
-								</pre>
-							</div>
-						{:else if line.kind === 'links'}
-							<RouteLinks path={line.path} entries={childLinks(line.path)} />
-						{:else if line.kind === 'socials'}
-							<SocialLinks />
-						{:else if line.kind === 'banner'}
-							<WelcomeBanner {posts} onCommand={runShortcut} />
-						{:else if line.kind === 'help'}
-							<HelpPanel />
-						{:else if line.kind === 'markdown'}
-							<div class="mt-3 border-b border-[var(--border)]">
-								<div class="terminal-prose terminal-prose-body">
-									<MarkdownBlocks blocks={parseMarkdown(line.markdown, {})} />
+							{:else if line.kind === 'links'}
+								<RouteLinks path={line.path} entries={childLinks(line.path)} />
+							{:else if line.kind === 'socials'}
+								<SocialLinks />
+							{:else if line.kind === 'banner'}
+								<WelcomeBanner {posts} onCommand={runShortcut} />
+							{:else if line.kind === 'help'}
+								<HelpPanel />
+							{:else if line.kind === 'markdown'}
+								<div class="mt-3 border-b border-[var(--border)]">
+									<div class="terminal-prose terminal-prose-body">
+										<MarkdownBlocks blocks={parseMarkdown(line.markdown, {})} />
+									</div>
 								</div>
-							</div>
-						{:else}
-							<pre
-								class={`terminal-output-line ${line.kind === 'success' ? 'text-[var(--green)]' : line.kind === 'error' ? 'text-[var(--red)]' : line.kind === 'muted' ? 'text-[var(--tx-2)]' : ''}`}>{line.text}</pre>
-						{/if}
-					{/each}
+							{:else}
+								<pre
+									class={`terminal-output-line ${line.kind === 'success' ? 'text-[var(--green)]' : line.kind === 'error' ? 'text-[var(--red)]' : line.kind === 'muted' ? 'text-[var(--tx-2)]' : ''}`}>{line.text}</pre>
+							{/if}
+						{/each}
+					</div>
 
 					{#if blogBrowserVisible}
 						<BlogBrowser
@@ -517,28 +540,33 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 							onSortChange={handleBlogSortChange}
 							onSelect={selectFzfResult}
 							onOpen={openFzfSelection}
+							onClose={closeBlogSearch}
 						/>
 					{/if}
 
-					<div class="terminal-shortcuts" aria-label="quick commands">
-						{#each mobileShortcuts as command (command)}
-							<button
-								type="button"
-								class="terminal-shortcut-button"
-								onclick={() => runShortcut(command)}
-							>
-								{command}
-							</button>
-						{/each}
-					</div>
+					{#if !blogBrowserVisible}
+						<div class="terminal-command-dock">
+							<div class="terminal-shortcuts" aria-label="quick commands">
+								{#each mobileShortcuts as command (command)}
+									<button
+										type="button"
+										class="terminal-shortcut-button"
+										onclick={() => runShortcut(command)}
+									>
+										{command}
+									</button>
+								{/each}
+							</div>
 
-					<PromptForm
-						cwd={formatPromptPath(cwd)}
-						bind:input
-						bind:inputRef={promptInput}
-						onKeydown={handlePromptKeydown}
-						onSubmit={submit}
-					/>
+							<PromptForm
+								cwd={formatPromptPath(cwd)}
+								bind:input
+								bind:inputRef={promptInput}
+								onKeydown={handlePromptKeydown}
+								onSubmit={submit}
+							/>
+						</div>
+					{/if}
 				</div>
 			{/if}
 		</article>

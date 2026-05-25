@@ -58,9 +58,9 @@
 				class="absolute top-0 right-[12px] z-[1] -translate-y-1/2 bg-[var(--bg)] px-[6px] text-[12px] leading-none text-[var(--yellow)] lowercase"
 				>{block.language}</span
 			>
-			<div class="grid grid-cols-[calc(5ch_+_20px)_minmax(0,1fr)] items-start">
+			<div class="grid grid-cols-[calc(5ch_+_20px)_minmax(0,1fr)] items-start max-[760px]:block">
 				<ol
-					class="code-line-numbers m-0 list-none justify-self-stretch border-r border-[var(--border)] py-[10px] pr-[8px] pl-[12px] text-right text-[var(--tx-2)] tabular-nums"
+					class="code-line-numbers m-0 list-none justify-self-stretch border-r border-[var(--border)] py-[10px] pr-[8px] pl-[12px] text-right text-[var(--tx-2)] tabular-nums max-[760px]:hidden"
 					aria-hidden="true"
 				>
 					{#each lineNumbers(block.code) as line (line)}
@@ -69,7 +69,7 @@
 				</ol>
 				<HighlightedCode
 					html={block.html}
-					class="min-w-0 [&_code]:block [&_code]:bg-transparent [&_code]:text-[16px] [&_code]:leading-[1.45] [&_pre]:m-0 [&_pre]:overflow-x-auto [&_pre]:bg-transparent [&_pre]:p-[10px_12px] max-[760px]:[&_pre]:px-[8px]"
+					class="min-w-0 [&_code]:block [&_code]:bg-transparent [&_code]:text-[16px] [&_code]:leading-[1.45] [&_pre]:m-0 [&_pre]:overflow-x-auto [&_pre]:bg-transparent [&_pre]:p-[10px_12px] max-[760px]:[&_pre]:px-[10px]"
 				/>
 			</div>
 		</div>

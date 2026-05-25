@@ -16,7 +16,8 @@
 		onKeydown,
 		onSortChange,
 		onSelect,
-		onOpen
+		onOpen,
+		onClose
 	}: {
 		posts: BlogPost[];
 		results: BlogPost[];
@@ -31,6 +32,7 @@
 		onSortChange: (sort: BlogSort) => void;
 		onSelect: (index: number) => void;
 		onOpen: (index: number) => void;
+		onClose: () => void;
 	} = $props();
 
 	const sortOptions: { value: BlogSort; label: string }[] = [
@@ -79,7 +81,15 @@
 <div class="blog-browser">
 	<div class="blog-browser-header">
 		<span>~/blog</span>
-		<span>{results.length}/{posts.length} posts</span>
+		<span class="blog-browser-header-meta">{results.length}/{posts.length} posts</span>
+		<button
+			type="button"
+			class="blog-browser-close"
+			aria-label="close blog browser"
+			onclick={onClose}
+		>
+			X
+		</button>
 	</div>
 	<div class="blog-browser-toolbar">
 		<label class="blog-browser-field blog-browser-field-query">
@@ -140,7 +150,7 @@
 				{#each results as post, index (post.path)}
 					<button
 						type="button"
-						class={`blog-browser-row ${index === selectedIndex ? 'bg-[var(--yellow)] text-[var(--bg)]' : 'text-[var(--tx)]'}`}
+						class={`blog-browser-row ${index === selectedIndex ? 'blog-browser-row-selected' : 'text-[var(--tx)]'}`}
 						style="counter-increment: post-row"
 						onclick={() => handleResultClick(index)}
 						ondblclick={() => onOpen(index)}
