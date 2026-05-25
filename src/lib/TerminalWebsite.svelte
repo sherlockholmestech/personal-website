@@ -440,22 +440,11 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 	/>
 </svelte:head>
 
-<main
-	class:light={theme === 'light'}
-	class="workspace terminal-workspace"
->
-	<section
-		class="terminal-shell"
-	>
-		<article
-			class="terminal-window"
-		>
-			<div
-				class="terminal-titlebar"
-			>
-				<span
-					class="terminal-title"
-				>
+<main class:light={theme === 'light'} class="workspace terminal-workspace">
+	<section class="terminal-shell">
+		<article class="terminal-window">
+			<div class="terminal-titlebar">
+				<span class="terminal-title">
 					{currentView === 'post' ? selectedPost.title : 'Sherlock Holmes // personal blog'}
 				</span>
 				{#if currentView === 'post'}
@@ -489,8 +478,7 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 										{line.cwd}
 									</span>
 								</div>
-								<pre
-									class="terminal-prompt-line">
+								<pre class="terminal-prompt-line">
 									<span class="text-[var(--yellow)]">❯</span> {line.command}
 								</pre>
 							</div>
@@ -504,9 +492,7 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 							<HelpPanel />
 						{:else if line.kind === 'markdown'}
 							<div class="mt-3 border-b border-[var(--border)]">
-								<div
-									class="terminal-prose terminal-prose-body"
-								>
+								<div class="terminal-prose terminal-prose-body">
 									<MarkdownBlocks blocks={parseMarkdown(line.markdown, {})} />
 								</div>
 							</div>
@@ -536,10 +522,7 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 						/>
 					{/if}
 
-					<div
-						class="terminal-shortcuts"
-						aria-label="quick commands"
-					>
+					<div class="terminal-shortcuts" aria-label="quick commands">
 						{#each mobileShortcuts as command (command)}
 							<button
 								type="button"

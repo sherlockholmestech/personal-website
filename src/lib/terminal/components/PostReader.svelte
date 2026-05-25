@@ -54,9 +54,7 @@
 </script>
 
 <article class="post-reader">
-	<div
-		class="post-toc-bar"
-	>
+	<div class="post-toc-bar">
 		<button
 			type="button"
 			aria-expanded={mobileTocOpen}
@@ -85,43 +83,25 @@
 		{/each}
 	</nav>
 
-	<div
-		bind:this={contentViewport}
-		class="post-content-viewport"
-		onscroll={handleScroll}
-	>
-		<div
-			class="post-content"
-		>
+	<div bind:this={contentViewport} class="post-content-viewport" onscroll={handleScroll}>
+		<div class="post-content">
 			<header class="post-header">
-				<h1
-					id="post-top"
-					data-heading-id="post-top"
-					class="post-title"
-				>
+				<h1 id="post-top" data-heading-id="post-top" class="post-title">
 					{post.title}
 				</h1>
 				{#if post.description}
-					<p
-						class="post-description"
-					>
+					<p class="post-description">
 						{post.description}
 					</p>
 				{/if}
-				<div
-					class="post-meta"
-				>
-					<div
-						class="post-meta-row"
-					>
+				<div class="post-meta">
+					<div class="post-meta-row">
 						<span class="post-meta-label">date</span>
 						<strong class="post-meta-value">
 							{formatPostDate(post.date)}
 						</strong>
 					</div>
-					<div
-						class="post-meta-row"
-					>
+					<div class="post-meta-row">
 						<span class="post-meta-label">tags</span>
 						<strong class="post-meta-value">
 							{#each post.tags as tag (tag)}
@@ -131,9 +111,7 @@
 					</div>
 				</div>
 			</header>
-			<div
-				class="terminal-prose terminal-prose-body"
-			>
+			<div class="terminal-prose terminal-prose-body">
 				<MarkdownBlocks {blocks} />
 			</div>
 		</div>

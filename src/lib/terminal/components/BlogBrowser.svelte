@@ -77,18 +77,12 @@
 </script>
 
 <div class="blog-browser">
-	<div
-		class="blog-browser-header"
-	>
+	<div class="blog-browser-header">
 		<span>~/blog</span>
 		<span>{results.length}/{posts.length} posts</span>
 	</div>
-	<div
-		class="blog-browser-toolbar"
-	>
-		<label
-			class="blog-browser-field blog-browser-field-query"
-		>
+	<div class="blog-browser-toolbar">
+		<label class="blog-browser-field blog-browser-field-query">
 			<span class="text-[var(--tx-2)]">query</span>
 			<input
 				bind:this={inputRef}
@@ -100,9 +94,7 @@
 				class="blog-browser-input"
 			/>
 		</label>
-		<label
-			class="blog-browser-field blog-browser-field-sort"
-		>
+		<label class="blog-browser-field blog-browser-field-sort">
 			<span class="text-[var(--tx-2)]">sort</span>
 			<div class="relative min-w-0" onfocusout={handleSortFocusOut}>
 				<button
@@ -118,11 +110,7 @@
 					<span class="text-[12px] text-[var(--yellow)]" aria-hidden="true">v</span>
 				</button>
 				{#if sortOpen}
-					<div
-						id="fzf-sort-menu"
-						class="blog-browser-sort-menu"
-						role="listbox"
-					>
+					<div id="fzf-sort-menu" class="blog-browser-sort-menu" role="listbox">
 						{#each sortOptions as option (option.value)}
 							<button
 								type="button"
@@ -140,18 +128,10 @@
 			</div>
 		</label>
 	</div>
-	<div
-		class="blog-browser-grid"
-	>
-		<div
-			class="blog-browser-results"
-			style="counter-reset: post-row"
-		>
+	<div class="blog-browser-grid">
+		<div class="blog-browser-results" style="counter-reset: post-row">
 			{#if results.length}
-				<div
-					class="blog-browser-results-header"
-					aria-hidden="true"
-				>
+				<div class="blog-browser-results-header" aria-hidden="true">
 					<span>title</span>
 					<span>date</span>
 					<span>tags</span>
@@ -191,21 +171,15 @@
 		</div>
 		<div class="blog-browser-preview">
 			{#if results.length}
-				<div
-					class="blog-browser-preview-header"
-				>
+				<div class="blog-browser-preview-header">
 					<span>preview</span>
 					<span>cat {selectedPost.path}</span>
 				</div>
-				<div
-					class="terminal-prose terminal-prose-preview"
-				>
+				<div class="terminal-prose terminal-prose-preview">
 					<MarkdownBlocks blocks={previewBlocks} post={selectedPost} showHeadingMeta />
 				</div>
 			{:else}
-				<div class="blog-browser-empty">
-					adjust query or clear it to see posts
-				</div>
+				<div class="blog-browser-empty">adjust query or clear it to see posts</div>
 			{/if}
 		</div>
 	</div>
