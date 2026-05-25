@@ -25,7 +25,7 @@
 			{cwd}
 		</span>
 	</div>
-	<label class="m-0 flex items-center gap-2 leading-[1.45] max-[760px]:min-h-[44px]">
+	<label class="m-0 flex items-baseline gap-2 leading-[1.45] max-[760px]:min-h-[44px]">
 		<span class="text-[var(--yellow)]">❯</span>
 		<input
 			bind:this={inputRef}
@@ -33,7 +33,7 @@
 			aria-label="terminal command"
 			autocomplete="off"
 			onkeydown={onKeydown}
-			class="min-w-[40px] flex-1 border-0 bg-transparent text-[var(--tx)] caret-[var(--yellow)] outline-none max-[760px]:min-h-[44px] max-[760px]:text-[16px]"
+			class="min-w-[40px] flex-1 appearance-none border-0 bg-transparent p-0 leading-[1.45] text-[var(--tx)] caret-[var(--yellow)] outline-none max-[760px]:text-[16px]"
 		/>
 	</label>
 </form>
