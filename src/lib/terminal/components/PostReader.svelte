@@ -46,10 +46,10 @@
 
 	const tocDepthClasses = [
 		'text-[var(--tx)] font-bold',
-		"mt-[2px] pl-[24px] border-l border-[var(--border)] text-[14px] before:absolute before:left-[8px] before:text-[var(--border)] before:content-['└']",
-		"mt-[4px] pl-[44px] border-l border-[var(--border)] text-[13px] before:absolute before:left-[24px] before:text-[var(--border)] before:content-['└']",
-		"mt-[4px] pl-[64px] border-l border-[var(--border)] text-[12px] before:absolute before:left-[44px] before:text-[var(--border)] before:content-['└']",
-		"mt-[4px] pl-[64px] border-l border-[var(--border)] text-[12px] before:absolute before:left-[44px] before:text-[var(--border)] before:content-['└']"
+		'mt-[2px] pl-[20px] border-l border-[var(--border)] text-[14px]',
+		'mt-[4px] pl-[36px] border-l border-[var(--border)] text-[13px]',
+		'mt-[4px] pl-[52px] border-l border-[var(--border)] text-[12px]',
+		'mt-[4px] pl-[52px] border-l border-[var(--border)] text-[12px]'
 	];
 </script>
 

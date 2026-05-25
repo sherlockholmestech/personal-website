@@ -52,6 +52,7 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 	let routeInitialized = $state(false);
 	let theme = $state<Theme>('dark');
 	let terminalViewport = $state<HTMLDivElement>();
+	let terminalScrollback = $state<HTMLDivElement>();
 	let promptInput = $state<HTMLInputElement>();
 	let fzfInput = $state<HTMLInputElement>();
 	let highlightedCode = $state<Record<string, string>>({});
@@ -435,8 +436,9 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 
 	async function scrollToPrompt() {
 		await tick();
-		if (!terminalViewport) return;
-		terminalViewport.scrollTop = terminalViewport.scrollHeight;
+		const scrollTarget = shouldAvoidImplicitFocus() ? terminalScrollback : terminalViewport;
+		if (!scrollTarget) return;
+		scrollTarget.scrollTop = scrollTarget.scrollHeight;
 	}
 
 	async function updateUrlForView(path?: string) {
@@ -484,12 +486,13 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 				<PostReader post={selectedPost} blocks={postViewBlocks} />
 			{:else}
 				<div
+					bind:this={terminalViewport}
 					class="terminal-viewport"
 					aria-live="polite"
 					role="application"
 					onpointerdown={focusPrompt}
 				>
-					<div bind:this={terminalViewport} class="terminal-scrollback">
+					<div bind:this={terminalScrollback} class="terminal-scrollback">
 						{#each history as line, index (index)}
 							{#if line.kind === 'prompt'}
 								<div class="mb-[14px]">
