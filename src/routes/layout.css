@@ -165,7 +165,7 @@
 	}
 
 	.terminal-viewport {
-		@apply flex min-h-0 flex-1 overflow-auto px-[14px] pt-[7px] pb-[8px] max-[760px]:px-[9px] max-[760px]:pt-[12px] max-[760px]:pb-[9px];
+		@apply flex min-h-0 flex-1 flex-col overflow-auto px-[14px] pt-[7px] pb-[8px] max-[760px]:px-[9px] max-[760px]:pt-[12px] max-[760px]:pb-[9px];
 		scrollbar-width: thin;
 		scrollbar-color: var(--border) transparent;
 	}
@@ -209,11 +209,16 @@
 		text-justify: inter-word;
 	}
 
+	.terminal-prose .code-line-numbers,
+	.terminal-prose .code-line-numbers li {
+		@apply m-0 list-none p-0 text-right leading-[1.45] whitespace-nowrap;
+	}
+
 	@media (max-width: 760px) {
 		.terminal-prose p,
 		.terminal-prose blockquote,
 		.terminal-prose li {
-			text-align: left;
+			text-align: justify;
 			overflow-wrap: anywhere;
 		}
 	}
@@ -227,7 +232,7 @@
 	}
 
 	.post-reader {
-		@apply relative flex h-full min-h-0 flex-1 overflow-hidden;
+		@apply relative block h-full min-h-0 flex-1 overflow-hidden;
 	}
 
 	.post-toc-bar {
@@ -251,11 +256,13 @@
 	}
 
 	.post-content-viewport {
-		@apply h-full min-h-0 overflow-auto pb-[32px] max-[760px]:h-[calc(100%_-_51px)];
+		@apply h-full min-h-0 w-full min-w-0 overflow-auto pb-[32px] max-[760px]:h-full;
+		scrollbar-width: thin;
+		scrollbar-color: var(--border) transparent;
 	}
 
 	.post-content {
-		@apply min-w-0 px-[18px] pt-[18px] pb-[56px] text-[16px] max-[760px]:px-[10px] max-[760px]:pt-[14px] max-[760px]:pb-[42px] max-[760px]:text-[clamp(16px,4vw,18px)];
+		@apply mx-auto w-full max-w-[86ch] min-w-0 px-[18px] pt-[18px] pb-[56px] text-[16px] max-[760px]:px-[10px] max-[760px]:pt-[14px] max-[760px]:pb-[42px] max-[760px]:text-[clamp(16px,4vw,18px)];
 	}
 
 	.post-header {
@@ -330,26 +337,31 @@
 
 	.blog-browser-grid {
 		@apply grid min-h-[220px] grid-cols-[minmax(360px,1fr)_minmax(220px,0.55fr)] max-[760px]:grid-cols-1;
+		--blog-browser-panel-height: 380px;
 	}
 
 	.blog-browser-results {
-		@apply min-w-0 border-r border-[var(--border)] p-[6px] max-[760px]:border-r-0 max-[760px]:border-b max-[760px]:border-[var(--border)];
+		@apply min-h-0 min-w-0 overflow-auto border-r border-[var(--border)] p-[6px] max-[760px]:max-h-[60vh] max-[760px]:border-r-0 max-[760px]:border-b max-[760px]:border-[var(--border)];
+		max-height: var(--blog-browser-panel-height);
+		scrollbar-width: thin;
+		scrollbar-color: var(--border) transparent;
 	}
 
 	.blog-browser-results-header {
-		@apply grid grid-cols-[minmax(180px,1.4fr)_10ch_minmax(120px,0.8fr)_minmax(140px,1fr)] gap-[12px] border-b border-[var(--border)] px-[6px] pb-[4px] font-bold text-[var(--yellow)] max-[760px]:hidden;
+		@apply sticky top-0 z-[1] grid grid-cols-[minmax(0,1.6fr)_10ch_minmax(0,1fr)_minmax(0,1.15fr)] gap-[12px] border-b border-[var(--border)] bg-[var(--bg)] px-[6px] pb-[4px] font-bold text-[var(--yellow)] max-[760px]:hidden;
 	}
 
 	.blog-browser-row {
-		@apply grid w-full cursor-pointer grid-cols-[minmax(180px,1.4fr)_10ch_minmax(120px,0.8fr)_minmax(140px,1fr)] gap-[12px] px-[6px] py-[4px] text-left max-[760px]:min-h-[84px] max-[760px]:touch-manipulation max-[760px]:grid-cols-1 max-[760px]:gap-[2px] max-[760px]:border-b max-[760px]:border-[var(--border)] max-[760px]:px-[8px] max-[760px]:py-[10px];
+		@apply grid w-full cursor-pointer grid-cols-[minmax(0,1.6fr)_10ch_minmax(0,1fr)_minmax(0,1.15fr)] items-start gap-[12px] px-[6px] py-[4px] text-left max-[760px]:min-h-[84px] max-[760px]:touch-manipulation max-[760px]:grid-cols-1 max-[760px]:gap-[2px] max-[760px]:border-b max-[760px]:border-[var(--border)] max-[760px]:px-[8px] max-[760px]:py-[10px];
 	}
 
 	.blog-browser-row::before {
-		content: '';
+		display: none;
 	}
 
 	@media (max-width: 760px) {
 		.blog-browser-row::before {
+			display: block;
 			content: counter(post-row, decimal-leading-zero);
 			color: var(--tx-2);
 		}
@@ -392,18 +404,17 @@
 		@apply mb-[10px] text-[12px] leading-[1.1] whitespace-pre text-[var(--cyan)];
 	}
 
+	.welcome-ascii-mobile {
+		@apply hidden text-[clamp(13px,3.8vw,16px)] leading-[1.05] whitespace-pre text-[var(--cyan)];
+	}
+
 	@media (max-width: 760px) {
 		.welcome-ascii {
-			max-width: 100%;
-			overflow: hidden;
-			font-size: 0;
-			white-space: pre-wrap;
+			display: none;
 		}
 
-		.welcome-ascii::after {
-			content: 'sherlock@website:~';
-			font-size: 16px;
-			line-height: 1.4;
+		.welcome-ascii-mobile {
+			display: block;
 		}
 	}
 
@@ -428,7 +439,7 @@
 	}
 
 	.welcome-command {
-		@apply bg-[var(--yellow)] px-[5px] py-[1px] text-[13px] text-[var(--bg)];
+		@apply cursor-pointer border-0 bg-[var(--yellow)] px-[5px] py-[1px] font-mono text-[13px] text-[var(--bg)] hover:bg-[var(--cyan)];
 	}
 
 	.welcome-latest {

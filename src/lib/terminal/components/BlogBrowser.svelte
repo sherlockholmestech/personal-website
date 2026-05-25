@@ -146,20 +146,22 @@
 						ondblclick={() => onOpen(index)}
 					>
 						<span
-							class="overflow-hidden [overflow-wrap:anywhere] text-ellipsis max-[760px]:pointer-events-none max-[760px]:font-bold"
+							class="min-w-0 [overflow-wrap:anywhere] whitespace-normal max-[760px]:pointer-events-none max-[760px]:font-bold"
 						>
 							{post.title}
 						</span>
-						<span class="opacity-[0.85] max-[760px]:pointer-events-none">
+						<span class="min-w-0 whitespace-normal opacity-[0.85] max-[760px]:pointer-events-none">
 							{formatPostDate(post.date)}
 						</span>
-						<span class="flex flex-wrap gap-[6px] opacity-[0.75] max-[760px]:pointer-events-none">
+						<span
+							class="flex min-w-0 flex-wrap gap-[6px] whitespace-normal opacity-[0.75] max-[760px]:pointer-events-none"
+						>
 							{#each post.tags as tag (tag)}
-								<span>#{tag}</span>
+								<span class="min-w-0 [overflow-wrap:anywhere]">#{tag}</span>
 							{/each}
 						</span>
 						<span
-							class="[overflow-wrap:anywhere] opacity-[0.55] max-[760px]:pointer-events-none max-[760px]:before:content-['cat_']"
+							class="min-w-0 [overflow-wrap:anywhere] whitespace-normal opacity-[0.55] max-[760px]:pointer-events-none max-[760px]:before:content-['cat_']"
 						>
 							{post.path}
 						</span>

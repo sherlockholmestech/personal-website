@@ -52,20 +52,19 @@
 		<blockquote>{@html block.html}</blockquote>
 	{:else if block.type === 'code'}
 		<div
-			class="my-[14px] overflow-hidden border-b border-[var(--border)] bg-[var(--bg)] max-[760px]:mx-[-2px]"
+			class="relative my-[14px] overflow-visible border-y border-[var(--border)] bg-[var(--bg)] max-[760px]:mx-[-2px]"
 		>
-			<div
-				class="relative flex items-center justify-end px-[12px] py-[8px] text-[12px] leading-none text-[var(--tx-2)] lowercase before:absolute before:inset-x-0 before:bottom-0 before:h-px before:bg-[var(--border)]"
+			<span
+				class="absolute top-0 right-[12px] z-[1] -translate-y-1/2 bg-[var(--bg)] px-[6px] text-[12px] leading-none text-[var(--yellow)] lowercase"
+				>{block.language}</span
 			>
-				<span class="relative bg-[var(--bg)] px-[6px] text-[var(--yellow)]">{block.language}</span>
-			</div>
 			<div class="grid grid-cols-[calc(5ch_+_20px)_minmax(0,1fr)] items-start">
 				<ol
-					class="m-0 list-none justify-self-stretch border-r border-[var(--border)] py-[10px] pr-[8px] pl-[12px] text-right text-[var(--tx-2)] tabular-nums"
+					class="code-line-numbers m-0 list-none justify-self-stretch border-r border-[var(--border)] py-[10px] pr-[8px] pl-[12px] text-right text-[var(--tx-2)] tabular-nums"
 					aria-hidden="true"
 				>
 					{#each lineNumbers(block.code) as line (line)}
-						<li class="m-0 leading-[1.45] whitespace-nowrap">{line}</li>
+						<li>{line}</li>
 					{/each}
 				</ol>
 				<HighlightedCode

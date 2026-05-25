@@ -487,7 +487,7 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 						{:else if line.kind === 'socials'}
 							<SocialLinks />
 						{:else if line.kind === 'banner'}
-							<WelcomeBanner {posts} />
+							<WelcomeBanner {posts} onCommand={runShortcut} />
 						{:else if line.kind === 'help'}
 							<HelpPanel />
 						{:else if line.kind === 'markdown'}
@@ -498,9 +498,7 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 							</div>
 						{:else}
 							<pre
-								class={`terminal-output-line ${line.kind === 'success' ? 'text-[var(--green)]' : line.kind === 'error' ? 'text-[var(--red)]' : line.kind === 'muted' ? 'text-[var(--tx-2)]' : ''}`}>
-								{line.text}
-							</pre>
+								class={`terminal-output-line ${line.kind === 'success' ? 'text-[var(--green)]' : line.kind === 'error' ? 'text-[var(--red)]' : line.kind === 'muted' ? 'text-[var(--tx-2)]' : ''}`}>{line.text}</pre>
 						{/if}
 					{/each}
 

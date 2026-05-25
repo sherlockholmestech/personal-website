@@ -4,7 +4,7 @@
 	import { formatPostDate } from '../date';
 	import type { BlogPost } from '../types';
 
-	let { posts }: { posts: BlogPost[] } = $props();
+	let { posts, onCommand }: { posts: BlogPost[]; onCommand: (command: string) => void } = $props();
 </script>
 
 <div class="welcome-banner">
@@ -22,6 +22,12 @@
 ╚════██║██╔══██║██╔══╝  ██╔══██╗██║     ██║   ██║██║     ██╔═██╗
 ███████║██║  ██║███████╗██║  ██║███████╗╚██████╔╝╚██████╗██║  ██╗
 ╚══════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝`}</pre>
+		<pre class="welcome-ascii-mobile" aria-hidden="true">{` _____ _               _            _    
+/  ___| |             | |          | |   
+\\ \`--.| |__   ___ _ __| | ___   ___| | __
+ \`--. \\ '_ \\ / _ \\ '__| |/ _ \\ / __| |/ /
+/\\__/ / | | |  __/ |  | | (_) | (__|   < 
+\\____/|_| |_|\\___|_|  |_|\\___/ \\___|_|\\_\\`}</pre>
 
 		<div class="welcome-summary" aria-label="site summary">
 			<div class="welcome-summary-row">
@@ -50,9 +56,14 @@
 			<span class="welcome-label">try</span>
 			<div class="flex flex-wrap gap-[6px]">
 				{#each helpfulCommands as command (command)}
-					<code class="welcome-command">
+					<button
+						type="button"
+						class="welcome-command"
+						aria-label={`run ${command}`}
+						onclick={() => onCommand(command)}
+					>
 						{command}
-					</code>
+					</button>
 				{/each}
 			</div>
 		</div>
