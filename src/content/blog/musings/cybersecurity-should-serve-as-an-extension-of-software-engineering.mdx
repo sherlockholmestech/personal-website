@@ -1,0 +1,27 @@
+---
+title: Cybersecurity Should Serve as an Extension of Software Engineering
+date: 2026-05-26
+description: 'My two cents on how we should approach Cybersecurity.'
+tags: ['musings', 'ctf', 'cybersecurity']
+---
+
+> Disclaimer:
+> The information presented in the following article is purely that of the opinion of the writer, and should not be, in any way or form, taken as fact.
+
+In today's Capture the Flag (CTF) circles, especially in Singapore, we often hear of laments with regard to the degradation of the skill base of newer and newer CTF players. Though many cite and criticise issues such as the lack of a proper training curriculum, opportunities to try and learn, and even the mentality of these newer CTF players, I personally do not believe them to be the biggest factor. I personally believe the biggest problem is that we are introducing these CTF players to the domain of Cybersecurity without prior domain knowledge of Software Engineering. We are teaching individuals how to attack systems before they understand how systems are built, and the result is that newer players can only namedrop exploits, failing to reason them out from first principles.
+
+# Software Engineering Is the Foundation of Cybersecurity
+
+For the parts of cybersecurity most visible in CTFs, such as vulnerability research, binary exploitation, web exploitation, reverse engineering, and forensics, the object of study is almost always software or the artifacts produced by software. When we do vulnerability research, we attack a codebase that someone else has written as a software product. When we conduct forensics analysis, we are looking for artifacts left by these software products that are the result of software engineering.
+
+Increasingly, we see individuals with minimal programming experience and little to no real software engineering experience being taught and introduced to the domain of cybersecurity. CTF competitions are now being pitched, both by the government and competition organisers, as competitions that one can take part in without much experience in programming. However, is that really true?
+
+Personally, I do not think as such. After all, in CTFs (and therefore by extension in the technical areas of Cybersecurity) we attack and exploit products of the software engineering process. Not only does the player need to posses domain knowledge of cybersecurity, they must also posses the ability to read, understand, figure out the assumptions, and build a mental model of the code that the product is based on. Such abilities are only inculcated by properly learning Software Engineering, where individuals spend long times not only reading, writing, and understanding code, but also thinking about higher level design and architectural decisions. This builds intuition and familiarity with different codebases and languages, allowing individuals to therefore inspect and derive exploits from scratch, which are critical skills needed in CTFs. Such a reasoning also explains the prevalence of so-called "script kiddies" — individuals that cannot build their own exploits but rely on pre-written scripts and payloads to "hack" others. This is just a mere symptom of individuals in Cybersecurity sorely lacking exposure to Software Engineering, not being familiar enough with code and the logical structures behind it to be able to see through the flaws themselves.
+
+In binary exploitation, one cannot meaningfully reason about a buffer overflow without understanding memory layout, stack frames, calling conventions, and how programs are written, compiled and thus executed. In web exploitation, one must understand routing, sessions, databases, serialization, authorization boundaries, and how backend logic is structured. In forensics, the same principle applies differently: artifacts only make sense when one understands how applications store state, write logs, cache data, and interact with the operating system. Across categories, the common skill is understanding how software behaves. And in order to do that, one must be familiar with the discipline of software engineering and systems design.
+
+How then, do we expect individuals, with minimal programming experience and software engineering experience to, first of all understand the architecture and conventions that such software products are designed in, and, second of all, think out of the box to exploit logical flaws in the program? All of these require context and intuition of how software is built and how it function on our computers, of which these individuals sorely lack. One can only exploit when you can thoroughly understand software codebases, and by introducing individuals to Cybersecurity before Software Engineering, we are making them jump the gun by skipping the fundamentals they need.
+
+# Epilogue
+
+It is hence my firm belief that Cybersecurity, at least in its technical and CTF-oriented forms, should be taught as an extension of software engineering and systems knowledge, not as an isolated discipline. Both are strongly tied to code itself; one in designing products around it, one in exploiting the vulnerabilities in it. It is only when we are able to logically understand the code that we can then exploit its flaws, and to do that one must have engaged with to a certain degree, software engineering.

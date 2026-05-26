@@ -48,7 +48,9 @@ export function parseMarkdown(
 					type: 'code',
 					language,
 					code: text,
-					html: highlightedCode[codeKey(text, language)] ?? escapeHtml(text)
+					html:
+						highlightedCode[codeKey(text, language)] ??
+						`<pre><code>${escapeHtml(text)}</code></pre>`
 				}
 			];
 		}

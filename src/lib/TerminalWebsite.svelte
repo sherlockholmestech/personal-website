@@ -65,6 +65,8 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 	let promptInput = $state<HTMLInputElement>();
 	let fzfInput = $state<HTMLInputElement>();
 	let highlightedCode = $state<Record<string, string>>({});
+	let previewMarkdownByPath = $state<Record<string, string>>({});
+	let previewHighlightedCodeByKey = $state<Record<string, Record<string, string>>>({});
 	const mobileShortcuts = ['help', 'blog', 'links', 'clear', 'home'];
 
 	let fileSystem = $derived(createFileSystem(posts));
@@ -85,8 +87,19 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 	let postViewBlocks = $derived(parsedPost);
 	let fzfResults = $derived(sortPosts(searchPosts(posts, fzfQuery), blogSort));
 	let browserSelectedPost = $derived(fzfResults[fzfIndex] ?? selectedPost);
+	let browserPreviewMarkdown = $derived(
+		selectedFullPost?.path === browserSelectedPost.path
+			? selectedFullPost.markdown
+			: previewMarkdownByPath[browserSelectedPost.path]
+	);
+	let browserPreviewHighlightKey = $derived(`${theme}:${browserSelectedPost.path}`);
+	let browserPreviewHighlightedCode = $derived(
+		previewHighlightedCodeByKey[browserPreviewHighlightKey] ?? {}
+	);
 	let browserPreviewBlocks = $derived(
-		selectedFullPost?.path === browserSelectedPost.path ? postBlocks(selectedFullPost) : []
+		browserPreviewMarkdown
+			? parseMarkdown(browserPreviewMarkdown, browserPreviewHighlightedCode)
+			: []
 	);
 
 	$effect(() => {
@@ -106,6 +119,34 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 		} else {
 			highlightedCode = {};
 		}
+	});
+
+	$effect(() => {
+		const path = browserSelectedPost.path;
+		if (
+			!blogBrowserVisible ||
+			!path ||
+			selectedFullPost?.path === path ||
+			path in previewMarkdownByPath
+		) {
+			return;
+		}
+
+		const controller = new AbortController();
+		void loadPreview(path, controller.signal);
+
+		return () => controller.abort();
+	});
+
+	$effect(() => {
+		const path = browserSelectedPost.path;
+		const markdown = browserPreviewMarkdown;
+		const key = browserPreviewHighlightKey;
+		if (!blogBrowserVisible || !path || !markdown || key in previewHighlightedCodeByKey) {
+			return;
+		}
+
+		void updatePreviewHighlightedCode(key, markdown, theme);
 	});
 
 	$effect(() => {
@@ -427,8 +468,22 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 		focusBlogSearchIfComfortable();
 	}
 
-	function postBlocks(post: BlogPost) {
-		return parseMarkdown(post.markdown, highlightedCode);
+	async function loadPreview(path: string, signal: AbortSignal) {
+		try {
+			const response = await fetch(
+				`${resolve('/api/blog-preview' as const)}?path=${encodeURIComponent(path)}`,
+				{ signal }
+			);
+			const preview = (await response.json()) as { markdown?: string };
+			previewMarkdownByPath = {
+				...previewMarkdownByPath,
+				[path]: response.ok && typeof preview.markdown === 'string' ? preview.markdown : ''
+			};
+		} catch (error) {
+			if (!(error instanceof DOMException && error.name === 'AbortError')) {
+				previewMarkdownByPath = { ...previewMarkdownByPath, [path]: '' };
+			}
+		}
 	}
 
 	function childLinks(path: string) {
@@ -454,6 +509,16 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 		const nextHighlightedCode = await highlightMarkdownCode(markdown, nextTheme);
 		if (selectedFullPost?.markdown === markdown && theme === nextTheme) {
 			highlightedCode = nextHighlightedCode;
+		}
+	}
+
+	async function updatePreviewHighlightedCode(key: string, markdown: string, nextTheme: Theme) {
+		const nextHighlightedCode = await highlightMarkdownCode(markdown, nextTheme);
+		if (theme === nextTheme) {
+			previewHighlightedCodeByKey = {
+				...previewHighlightedCodeByKey,
+				[key]: nextHighlightedCode
+			};
 		}
 	}
 

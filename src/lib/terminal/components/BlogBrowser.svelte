@@ -188,19 +188,18 @@
 					<span>cat {selectedPost.path}</span>
 				</div>
 				<div class="terminal-prose terminal-prose-preview">
+					<h1>{selectedPost.title}</h1>
+					{#if selectedPost.description}
+						<p class="text-[var(--tx-2)]">{selectedPost.description}</p>
+					{/if}
+					<p class="flex flex-wrap gap-x-[10px] gap-y-[3px] text-[var(--tx-2)]">
+						{formatPostDate(selectedPost.date)}
+						{#each selectedPost.tags as tag (tag)}
+							<span>#{tag}</span>
+						{/each}
+					</p>
 					{#if previewBlocks.length}
-						<MarkdownBlocks blocks={previewBlocks} post={selectedPost} showHeadingMeta />
-					{:else}
-						<h1>{selectedPost.title}</h1>
-						{#if selectedPost.description}
-							<p>{selectedPost.description}</p>
-						{/if}
-						<p class="text-[var(--tx-2)]">
-							{formatPostDate(selectedPost.date)}
-							{#each selectedPost.tags as tag (tag)}
-								<span> #{tag}</span>
-							{/each}
-						</p>
+						<MarkdownBlocks blocks={previewBlocks} compactCode />
 					{/if}
 				</div>
 			{:else}
