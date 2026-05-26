@@ -1,7 +1,7 @@
-import type { BlogPost, BlogSort } from './types';
+import type { BlogPostMeta, BlogSort } from './types';
 import { formatPostDate } from './date';
 
-export function searchPosts(posts: BlogPost[], query: string) {
+export function searchPosts(posts: BlogPostMeta[], query: string) {
 	const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
 
 	if (!terms.length) return posts;
@@ -16,8 +16,7 @@ export function searchPosts(posts: BlogPost[], query: string) {
 			post.path,
 			post.date,
 			formatPostDate(post.date),
-			post.tags.join(' '),
-			post.markdown
+			post.tags.join(' ')
 		]
 			.join('\n')
 			.toLowerCase();
@@ -31,7 +30,7 @@ export function searchPosts(posts: BlogPost[], query: string) {
 	});
 }
 
-export function sortPosts(posts: BlogPost[], sort: BlogSort) {
+export function sortPosts(posts: BlogPostMeta[], sort: BlogSort) {
 	return [...posts].sort((a, b) => {
 		if (sort === 'date-asc') return a.date.localeCompare(b.date);
 		if (sort === 'title-asc') return a.title.localeCompare(b.title);
@@ -40,25 +39,10 @@ export function sortPosts(posts: BlogPost[], sort: BlogSort) {
 	});
 }
 
-export function postExcerpt(post: BlogPost) {
-	return (
-		post.markdown
-			.split('\n')
-			.find((line) => line.trim() && !line.startsWith('#') && !line.startsWith('```')) ?? ''
-	);
+export function postExcerpt(post: BlogPostMeta) {
+	return post.description;
 }
 
-export function matchingPreview(post: BlogPost, query: string) {
-	const terms = query
-		.toLowerCase()
-		.split(/\s+/)
-		.filter((term) => term && !term.startsWith('#') && !term.startsWith('/'));
-
-	if (!terms.length) return postExcerpt(post);
-
-	return (
-		post.markdown
-			.split('\n')
-			.find((line) => terms.some((term) => line.toLowerCase().includes(term))) ?? postExcerpt(post)
-	);
+export function matchingPreview(post: BlogPostMeta) {
+	return postExcerpt(post);
 }

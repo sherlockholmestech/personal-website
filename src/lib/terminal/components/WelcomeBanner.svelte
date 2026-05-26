@@ -2,9 +2,10 @@
 	import { resolve } from '$app/paths';
 	import { helpfulCommands } from '../help';
 	import { formatPostDate } from '../date';
-	import type { BlogPost } from '../types';
+	import type { BlogPostMeta } from '../types';
 
-	let { posts, onCommand }: { posts: BlogPost[]; onCommand: (command: string) => void } = $props();
+	let { posts, onCommand }: { posts: BlogPostMeta[]; onCommand: (command: string) => void } =
+		$props();
 </script>
 
 <div class="welcome-banner">

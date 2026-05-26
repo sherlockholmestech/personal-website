@@ -1,5 +1,5 @@
-import { loadPosts } from '$lib/blog';
+import { loadPostMetas } from '$lib/blog';
 
 export function load() {
-	return loadPosts();
+	return loadPostMetas();
 }

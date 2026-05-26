@@ -1,10 +1,11 @@
 import { marked, type Tokens } from 'marked';
-import { codeToHtml } from 'shiki';
 import type { MdBlock, Theme } from './types';
 
 marked.use({
 	breaks: true
 });
+
+const highlightedCodeCache = new Map<string, string>();
 
 export function parseMarkdown(
 	markdown: string,
@@ -66,14 +67,22 @@ export async function highlightMarkdownCode(markdown: string, theme: Theme) {
 		.lexer(markdown)
 		.filter((token): token is Tokens.Code => token.type === 'code');
 
+	if (!codeBlocks.length) return {};
+
+	const { codeToHtml } = await import('shiki');
 	const entries = await Promise.all(
 		codeBlocks.map(async (block) => {
 			const language = block.lang || 'text';
 			const text = normalizeCodeBlock(block.text);
-			const html = await codeToHtml(text, {
-				lang: language,
-				theme: theme === 'dark' ? 'vitesse-dark' : 'vitesse-light'
-			});
+			const key = highlightCacheKey(text, language, theme);
+			const cachedHtml = highlightedCodeCache.get(key);
+			const html =
+				cachedHtml ??
+				(await codeToHtml(text, {
+					lang: language,
+					theme: theme === 'dark' ? 'vitesse-dark' : 'vitesse-light'
+				}));
+			highlightedCodeCache.set(key, html);
 			return [codeKey(text, language), html] as const;
 		})
 	);
@@ -85,8 +94,12 @@ export function codeKey(code: string, language: string) {
 	return `${language}:${code}`;
 }
 
+function highlightCacheKey(code: string, language: string, theme: Theme) {
+	return `${theme}:${language}:${code}`;
+}
+
 function inlineHtml(value: string) {
-	return marked.parseInline(value) as string;
+	return decorateImages(marked.parseInline(value) as string);
 }
 
 function headingId(text: string, used: Map<string, number>) {
@@ -121,4 +134,12 @@ function escapeHtml(value: string) {
 		.replaceAll('>', '&gt;')
 		.replaceAll('"', '&quot;')
 		.replaceAll("'", '&#39;');
+}
+
+function decorateImages(html: string) {
+	return html.replace(/<img\b([^>]*)>/g, (_match, attributes: string) => {
+		const loading = /\sloading=/.test(attributes) ? '' : ' loading="lazy"';
+		const decoding = /\sdecoding=/.test(attributes) ? '' : ' decoding="async"';
+		return `<img${attributes}${loading}${decoding}>`;
+	});
 }

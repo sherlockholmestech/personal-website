@@ -16,7 +16,7 @@
 	} from '$lib/terminal/filesystem';
 	import { highlightMarkdownCode, parseMarkdown } from '$lib/terminal/markdown';
 	import { searchPosts, sortPosts } from '$lib/terminal/search';
-	import type { BlogPost, BlogSort, ShellLine, Theme } from '$lib/terminal/types';
+	import type { BlogPost, BlogPostMeta, BlogSort, ShellLine, Theme } from '$lib/terminal/types';
 	import BlogBrowser from '$lib/terminal/components/BlogBrowser.svelte';
 	import HelpPanel from '$lib/terminal/components/HelpPanel.svelte';
 	import MarkdownBlocks from '$lib/terminal/components/MarkdownBlocks.svelte';
@@ -34,9 +34,18 @@ You can also find me in the Model United Nations circuit occasionally.
 
 I primarily program in Rust, though I have dipped my toes (maybe a bit too much) into web development.`;
 
-	let { data }: { data: { posts: BlogPost[]; requestedPath?: string; notFound?: boolean } } =
-		$props();
+	let {
+		data
+	}: {
+		data: {
+			posts: BlogPostMeta[];
+			post?: BlogPost;
+			requestedPath?: string;
+			notFound?: boolean;
+		};
+	} = $props();
 	let posts = $derived(data.posts);
+	let loadedPost = $derived(data.post);
 	let requestedPath = $derived(data.requestedPath);
 	let routeNotFound = $derived(data.notFound);
 
@@ -49,7 +58,7 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 	let fzfQuery = $state('');
 	let fzfIndex = $state(0);
 	let blogSort = $state<BlogSort>('date-desc');
-	let routeInitialized = $state(false);
+	let initializedRoutePath = $state<string>();
 	let theme = $state<Theme>('dark');
 	let terminalViewport = $state<HTMLDivElement>();
 	let terminalScrollback = $state<HTMLDivElement>();
@@ -59,22 +68,26 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 	const mobileShortcuts = ['help', 'blog', 'links', 'clear', 'home'];
 
 	let fileSystem = $derived(createFileSystem(posts));
-	let selectedPost = $derived(
+	let selectedPost = $derived<BlogPostMeta>(
 		posts.find((post) => post.path === selectedPath) ??
-			posts[0] ?? {
+			loadedPost ?? {
 				path: '',
 				title: '',
 				description: '',
 				date: '',
-				tags: [],
-				markdown: ''
+				tags: []
 			}
 	);
-	let parsedPost = $derived(parseMarkdown(selectedPost.markdown, highlightedCode));
+	let selectedFullPost = $derived(loadedPost?.path === selectedPath ? loadedPost : undefined);
+	let parsedPost = $derived(
+		selectedFullPost ? parseMarkdown(selectedFullPost.markdown, highlightedCode) : []
+	);
 	let postViewBlocks = $derived(parsedPost);
 	let fzfResults = $derived(sortPosts(searchPosts(posts, fzfQuery), blogSort));
 	let browserSelectedPost = $derived(fzfResults[fzfIndex] ?? selectedPost);
-	let browserPreviewBlocks = $derived(postBlocks(browserSelectedPost));
+	let browserPreviewBlocks = $derived(
+		selectedFullPost?.path === browserSelectedPost.path ? postBlocks(selectedFullPost) : []
+	);
 
 	$effect(() => {
 		if (!selectedPath && posts.length) {
@@ -88,11 +101,15 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 	});
 
 	$effect(() => {
-		void updateHighlightedCode(selectedPost.markdown, theme);
+		if (currentView === 'post' && selectedFullPost) {
+			void updateHighlightedCode(selectedFullPost.markdown, theme);
+		} else {
+			highlightedCode = {};
+		}
 	});
 
 	$effect(() => {
-		if (!routeInitialized && requestedPath) {
+		if (requestedPath && initializedRoutePath !== requestedPath) {
 			if (routeNotFound) {
 				history = [
 					...history,
@@ -106,7 +123,10 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 					history = [...history, { kind: 'links', path: requestedPath }];
 				}
 			}
-			routeInitialized = true;
+			initializedRoutePath = requestedPath;
+		}
+		if (!requestedPath && initializedRoutePath) {
+			initializedRoutePath = undefined;
 		}
 	});
 
@@ -431,7 +451,10 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 	}
 
 	async function updateHighlightedCode(markdown: string, nextTheme: Theme) {
-		highlightedCode = await highlightMarkdownCode(markdown, nextTheme);
+		const nextHighlightedCode = await highlightMarkdownCode(markdown, nextTheme);
+		if (selectedFullPost?.markdown === markdown && theme === nextTheme) {
+			highlightedCode = nextHighlightedCode;
+		}
 	}
 
 	async function scrollToPrompt() {
@@ -483,7 +506,14 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 				{/if}
 			</div>
 			{#if currentView === 'post'}
-				<PostReader post={selectedPost} blocks={postViewBlocks} />
+				{#if selectedFullPost}
+					<PostReader post={selectedFullPost} blocks={postViewBlocks} />
+				{:else}
+					<div class="terminal-viewport">
+						<pre
+							class="terminal-output-line text-[var(--tx-2)]">loading {selectedPost.path}...</pre>
+					</div>
+				{/if}
 			{:else}
 				<div
 					bind:this={terminalViewport}

@@ -10,12 +10,15 @@ export type ShellLine =
 	| { kind: 'help' }
 	| { kind: 'markdown'; markdown: string };
 
-export type BlogPost = {
+export type BlogPostMeta = {
 	path: string;
 	title: string;
 	description: string;
 	date: string;
 	tags: string[];
+};
+
+export type BlogPost = BlogPostMeta & {
 	markdown: string;
 };
 

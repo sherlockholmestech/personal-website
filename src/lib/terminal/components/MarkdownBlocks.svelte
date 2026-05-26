@@ -3,7 +3,7 @@
 
 	import HighlightedCode from '$lib/HighlightedCode.svelte';
 	import { formatPostDate } from '../date';
-	import type { BlogPost, MdBlock } from '../types';
+	import type { BlogPostMeta, MdBlock } from '../types';
 
 	let {
 		blocks,
@@ -11,7 +11,7 @@
 		showHeadingMeta = false
 	}: {
 		blocks: MdBlock[];
-		post?: BlogPost;
+		post?: BlogPostMeta;
 		showHeadingMeta?: boolean;
 	} = $props();
 

@@ -1,13 +1,5 @@
 import matter from 'gray-matter';
-
-type BlogPost = {
-	path: string;
-	title: string;
-	description: string;
-	date: string;
-	tags: string[];
-	markdown: string;
-};
+import type { BlogPost, BlogPostMeta } from '$lib/terminal/types';
 
 type Frontmatter = {
 	title?: string;
@@ -30,22 +22,53 @@ export function loadPosts() {
 	return { posts };
 }
 
+export function loadPostMetas() {
+	const posts = Object.entries(modules)
+		.map(([filePath, raw]) => toPostMeta(filePath, raw))
+		.sort((a, b) => b.date.localeCompare(a.date));
+
+	return { posts };
+}
+
+export function loadPost(path: string) {
+	const normalizedPath = path.replace(/^\/+/, '').replace(/\.mdx?$/, '');
+	const entry = Object.entries(modules).find(([filePath]) => postPath(filePath) === normalizedPath);
+
+	return entry ? toPost(entry[0], entry[1]) : undefined;
+}
+
 function toPost(filePath: string, raw: string): BlogPost {
 	const { data, content } = matter(raw);
-	const frontmatter = data as Frontmatter;
-	const path = filePath
-		.replace('/src/content/', '')
-		.replace(/\.mdx$/, '')
-		.replace(/\/index$/, '');
+	const meta = toMeta(filePath, data as Frontmatter);
+
+	return {
+		...meta,
+		markdown: content.trim()
+	};
+}
+
+function toPostMeta(filePath: string, raw: string): BlogPostMeta {
+	const { data } = matter(raw);
+	return toMeta(filePath, data as Frontmatter);
+}
+
+function toMeta(filePath: string, frontmatter: Frontmatter): BlogPostMeta {
+	const path = postPath(filePath);
 
 	return {
 		path,
 		title: frontmatter.title ?? titleFromPath(path),
 		description: frontmatter.description ?? '',
 		date: normalizeDate(frontmatter.date),
-		tags: frontmatter.tags ?? [],
-		markdown: content.trim()
+		tags: frontmatter.tags ?? []
 	};
+}
+
+function postPath(filePath: string) {
+	return filePath
+		.replace('/src/content/', '')
+		.replace(/\.mdx$/, '')
+		.replace(/\/index$/, '');
 }
 
 function normalizeDate(value?: string | Date) {

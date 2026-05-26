@@ -1,10 +1,10 @@
-import type { BlogPost } from './types';
+import type { BlogPostMeta } from './types';
 
 export const ROOT_DIRECTORY = '/';
 export const HOME_DIRECTORY = '/home/sherlock';
 
 export type FileSystem = {
-	files: Map<string, BlogPost>;
+	files: Map<string, BlogPostMeta>;
 	directories: Set<string>;
 };
 
@@ -14,8 +14,8 @@ export type FsEntry = {
 	type: 'file' | 'directory';
 };
 
-export function createFileSystem(posts: BlogPost[]): FileSystem {
-	const files = new Map<string, BlogPost>();
+export function createFileSystem(posts: BlogPostMeta[]): FileSystem {
+	const files = new Map<string, BlogPostMeta>();
 	const directories = new Set<string>([ROOT_DIRECTORY, '/home', HOME_DIRECTORY]);
 
 	for (const post of posts) {

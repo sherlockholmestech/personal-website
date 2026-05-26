@@ -1,14 +1,16 @@
-import { loadPosts } from '$lib/blog';
+import { loadPost, loadPostMetas } from '$lib/blog';
 
 export function load({ params }: { params: { slug: string } }) {
-	const data = loadPosts();
+	const data = loadPostMetas();
 	const requestedPath = `blog/${params.slug}`;
+	const post = loadPost(requestedPath);
 
 	return {
 		...data,
+		post,
 		requestedPath,
 		notFound: !data.posts.some(
-			(post) => post.path === requestedPath || post.path.startsWith(`${requestedPath}/`)
+			(postMeta) => postMeta.path === requestedPath || postMeta.path.startsWith(`${requestedPath}/`)
 		)
 	};
 }

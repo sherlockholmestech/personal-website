@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { BlogPost, BlogSort, MdBlock } from '../types';
+	import type { BlogPostMeta, BlogSort, MdBlock } from '../types';
 	import { formatPostDate } from '../date';
 	import MarkdownBlocks from './MarkdownBlocks.svelte';
 
@@ -19,10 +19,10 @@
 		onOpen,
 		onClose
 	}: {
-		posts: BlogPost[];
-		results: BlogPost[];
+		posts: BlogPostMeta[];
+		results: BlogPostMeta[];
 		selectedIndex: number;
-		selectedPost: BlogPost;
+		selectedPost: BlogPostMeta;
 		previewBlocks: MdBlock[];
 		sort: BlogSort;
 		query?: string;
@@ -188,7 +188,20 @@
 					<span>cat {selectedPost.path}</span>
 				</div>
 				<div class="terminal-prose terminal-prose-preview">
-					<MarkdownBlocks blocks={previewBlocks} post={selectedPost} showHeadingMeta />
+					{#if previewBlocks.length}
+						<MarkdownBlocks blocks={previewBlocks} post={selectedPost} showHeadingMeta />
+					{:else}
+						<h1>{selectedPost.title}</h1>
+						{#if selectedPost.description}
+							<p>{selectedPost.description}</p>
+						{/if}
+						<p class="text-[var(--tx-2)]">
+							{formatPostDate(selectedPost.date)}
+							{#each selectedPost.tags as tag (tag)}
+								<span> #{tag}</span>
+							{/each}
+						</p>
+					{/if}
 				</div>
 			{:else}
 				<div class="blog-browser-empty">adjust query or clear it to see posts</div>
