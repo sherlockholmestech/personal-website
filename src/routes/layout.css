@@ -233,11 +233,12 @@
 	}
 
 	.post-reader {
-		@apply relative block h-full min-h-0 flex-1 overflow-hidden;
+		--post-anchor-offset: 22px;
+		@apply relative flex h-full min-h-0 flex-1 flex-col overflow-hidden;
 	}
 
 	.post-toc-bar {
-		@apply hidden max-[760px]:sticky max-[760px]:top-0 max-[760px]:z-[5] max-[760px]:ml-[9px] max-[760px]:flex max-[760px]:min-h-[60px] max-[760px]:w-[calc(100%_-_18px)] max-[760px]:justify-start max-[760px]:gap-[8px] max-[760px]:bg-[var(--bg)] max-[760px]:py-[14px] max-[760px]:pb-[8px];
+		@apply hidden max-[760px]:sticky max-[760px]:top-0 max-[760px]:z-[5] max-[760px]:ml-[9px] max-[760px]:flex max-[760px]:min-h-[60px] max-[760px]:w-[calc(100%_-_18px)] max-[760px]:flex-none max-[760px]:justify-start max-[760px]:gap-[8px] max-[760px]:bg-[var(--bg)] max-[760px]:py-[14px] max-[760px]:pb-[8px];
 	}
 
 	.post-toc-toggle {
@@ -257,9 +258,21 @@
 	}
 
 	.post-content-viewport {
-		@apply h-full min-h-0 w-full min-w-0 overflow-auto pb-[32px] max-[760px]:h-full;
+		@apply min-h-0 w-full min-w-0 flex-1 overflow-auto pb-[32px];
+		scroll-padding-top: var(--post-anchor-offset);
 		scrollbar-width: thin;
 		scrollbar-color: var(--border) transparent;
+	}
+
+	.post-title,
+	.terminal-prose-body :where(h1, h2, h3) {
+		scroll-margin-top: var(--post-anchor-offset);
+	}
+
+	@media (max-width: 760px) {
+		.post-reader {
+			--post-anchor-offset: 18px;
+		}
 	}
 
 	.post-content {

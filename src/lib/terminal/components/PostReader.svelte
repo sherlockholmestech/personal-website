@@ -27,17 +27,31 @@
 	function handleScroll() {
 		if (!contentViewport) return;
 
+		const viewportTop = contentViewport.getBoundingClientRect().top;
+		const scrollOffset = headingScrollOffset();
 		const headings = Array.from(contentViewport.querySelectorAll<HTMLElement>('[data-heading-id]'));
 		const current = headings
-			.filter((heading) => heading.offsetTop <= contentViewport!.scrollTop + 36)
+			.filter((heading) => heading.getBoundingClientRect().top - viewportTop <= scrollOffset + 1)
 			.at(-1);
 		activeHeading = current?.dataset.headingId ?? toc[0]?.id ?? '';
 	}
 
 	function scrollToHeading(id: string) {
 		const heading = contentViewport?.querySelector<HTMLElement>(`#${CSS.escape(id)}`);
-		heading?.scrollIntoView({ block: 'start' });
+		if (heading && contentViewport) {
+			const viewportTop = contentViewport.getBoundingClientRect().top;
+			const headingTop = heading.getBoundingClientRect().top - viewportTop;
+			const top = Math.max(0, contentViewport.scrollTop + headingTop - headingScrollOffset());
+			contentViewport.scrollTo({ top });
+		}
 		mobileTocOpen = false;
+	}
+
+	function headingScrollOffset() {
+		if (!contentViewport) return 0;
+
+		const scrollPaddingTop = getComputedStyle(contentViewport).scrollPaddingTop;
+		return Number.parseFloat(scrollPaddingTop) || 0;
 	}
 
 	function tocDepth(level: number) {
