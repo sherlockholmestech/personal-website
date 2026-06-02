@@ -62,12 +62,19 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 	let theme = $state<Theme>('dark');
 	let terminalViewport = $state<HTMLDivElement>();
 	let terminalScrollback = $state<HTMLDivElement>();
+	let terminalTitlebar = $state<HTMLDivElement>();
+	let terminalTitleMeasurer = $state<HTMLSpanElement>();
 	let promptInput = $state<HTMLInputElement>();
 	let fzfInput = $state<HTMLInputElement>();
 	let highlightedCode = $state<Record<string, string>>({});
 	let previewMarkdownByPath = $state<Record<string, string>>({});
 	let previewHighlightedCodeByKey = $state<Record<string, Record<string, string>>>({});
+	let titlebarWidth = $state(0);
+	let titleMeasurementReady = $state(false);
+	let displayedTerminalTitle = $state('Sherlock Holmes // personal blog');
+	let titleMeasureContext: CanvasRenderingContext2D | undefined;
 	const mobileShortcuts = ['help', 'blog', 'links', 'clear', 'home'];
+	const TITLE_TRUNCATION_SUFFIX = '[...]';
 
 	let fileSystem = $derived(createFileSystem(posts));
 	let selectedPost = $derived<BlogPostMeta>(
@@ -101,6 +108,9 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 			? parseMarkdown(browserPreviewMarkdown, browserPreviewHighlightedCode)
 			: []
 	);
+	let terminalTitleText = $derived(
+		currentView === 'post' ? selectedPost.title : 'Sherlock Holmes // personal blog'
+	);
 
 	$effect(() => {
 		if (!selectedPath && posts.length) {
@@ -111,6 +121,30 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 	onMount(async () => {
 		await tick();
 		focusPromptIfComfortable();
+		await document.fonts?.ready;
+		titleMeasurementReady = true;
+	});
+
+	$effect(() => {
+		if (!terminalTitlebar) return;
+
+		const updateTitlebarWidth = () => {
+			titlebarWidth = terminalTitlebar?.clientWidth ?? 0;
+		};
+		const resizeObserver = new ResizeObserver(updateTitlebarWidth);
+		resizeObserver.observe(terminalTitlebar);
+		window.addEventListener('resize', updateTitlebarWidth);
+		updateTitlebarWidth();
+
+		return () => {
+			resizeObserver.disconnect();
+			window.removeEventListener('resize', updateTitlebarWidth);
+		};
+	});
+
+	$effect(() => {
+		if (!titleMeasurementReady) return;
+		displayedTerminalTitle = truncateTerminalTitle(terminalTitleText, titlebarWidth);
 	});
 
 	$effect(() => {
@@ -197,6 +231,58 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 		if (!shouldAvoidImplicitFocus()) {
 			fzfInput?.focus();
 		}
+	}
+
+	function truncateTerminalTitle(title: string, width: number) {
+		if (!terminalTitleMeasurer || width <= 0) return title;
+
+		const maxWidth = getTerminalTitleMaxWidth(width);
+		if (measureTerminalTitle(title) <= maxWidth) return title;
+
+		if (measureTerminalTitle(TITLE_TRUNCATION_SUFFIX) > maxWidth) {
+			return TITLE_TRUNCATION_SUFFIX;
+		}
+
+		let low = 0;
+		let high = title.length;
+
+		while (low < high) {
+			const middle = Math.ceil((low + high) / 2);
+			const candidate = `${title.slice(0, middle).trimEnd()}${TITLE_TRUNCATION_SUFFIX}`;
+
+			if (measureTerminalTitle(candidate) <= maxWidth) {
+				low = middle;
+			} else {
+				high = middle - 1;
+			}
+		}
+
+		return `${title.slice(0, low).trimEnd()}${TITLE_TRUNCATION_SUFFIX}`;
+	}
+
+	function getTerminalTitleMaxWidth(width: number) {
+		if (window.matchMedia('(max-width: 760px)').matches) {
+			return Math.max(0, width - 42);
+		}
+
+		return width * 0.75;
+	}
+
+	function measureTerminalTitle(title: string) {
+		if (!terminalTitleMeasurer) return 0;
+		const style = getComputedStyle(terminalTitleMeasurer);
+		const context =
+			titleMeasureContext ??
+			(document.createElement('canvas').getContext('2d') as CanvasRenderingContext2D | null);
+
+		if (!context) return 0;
+
+		titleMeasureContext = context;
+		context.font = style.font;
+
+		const padding = Number.parseFloat(style.paddingLeft) + Number.parseFloat(style.paddingRight);
+
+		return Math.ceil(context.measureText(title).width + padding);
 	}
 
 	function handlePromptKeydown(event: KeyboardEvent) {
@@ -555,10 +641,15 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 <main class:light={theme === 'light'} class="workspace terminal-workspace">
 	<section class="terminal-shell">
 		<article class="terminal-window">
-			<div class="terminal-titlebar">
-				<span class="terminal-title">
-					{currentView === 'post' ? selectedPost.title : 'Sherlock Holmes // personal blog'}
+			<div class="terminal-titlebar" bind:this={terminalTitlebar}>
+				<span class="terminal-title" title={terminalTitleText}>
+					{displayedTerminalTitle}
 				</span>
+				<span
+					class="terminal-title terminal-title-measurer"
+					aria-hidden="true"
+					bind:this={terminalTitleMeasurer}
+				></span>
 				{#if currentView === 'post'}
 					<button
 						type="button"

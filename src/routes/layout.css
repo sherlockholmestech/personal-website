@@ -126,7 +126,11 @@
 	}
 
 	.terminal-title {
-		@apply inline-flex max-w-[75%] overflow-hidden bg-[var(--bg)] px-[7px] font-bold text-ellipsis whitespace-nowrap text-[var(--yellow)] max-[760px]:max-w-[calc(100%_-_42px)] max-[760px]:pt-[2px] max-[760px]:pb-[3px] max-[760px]:leading-[1.2];
+		@apply inline-flex max-w-[75%] overflow-hidden bg-[var(--bg)] px-[7px] font-bold whitespace-nowrap text-[var(--yellow)] max-[760px]:max-w-[calc(100%_-_42px)] max-[760px]:pt-[2px] max-[760px]:pb-[3px] max-[760px]:leading-[1.2];
+	}
+
+	.terminal-title-measurer {
+		@apply pointer-events-none absolute max-w-none overflow-visible whitespace-nowrap opacity-0;
 	}
 
 	.terminal-close-button {
