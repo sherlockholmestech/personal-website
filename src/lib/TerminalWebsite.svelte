@@ -21,6 +21,7 @@
 	import HelpPanel from '$lib/terminal/components/HelpPanel.svelte';
 	import MarkdownBlocks from '$lib/terminal/components/MarkdownBlocks.svelte';
 	import PostReader from '$lib/terminal/components/PostReader.svelte';
+	import ProjectsTable from '$lib/terminal/components/ProjectsTable.svelte';
 	import PromptForm from '$lib/terminal/components/PromptForm.svelte';
 	import RouteLinks from '$lib/terminal/components/RouteLinks.svelte';
 	import SocialLinks from '$lib/terminal/components/SocialLinks.svelte';
@@ -73,7 +74,7 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 	let titleMeasurementReady = $state(false);
 	let displayedTerminalTitle = $state('Sherlock Holmes // personal blog');
 	let titleMeasureContext: CanvasRenderingContext2D | undefined;
-	const mobileShortcuts = ['help', 'blog', 'links', 'clear', 'home'];
+	const mobileShortcuts = ['help', 'blog', 'projects', 'links', 'clear', 'home'];
 	const TITLE_TRUNCATION_SUFFIX = '[...]';
 
 	let fileSystem = $derived(createFileSystem(posts));
@@ -362,6 +363,11 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 
 		if (name === 'links') {
 			history = [...history, { kind: 'socials' }];
+			return;
+		}
+
+		if (name === 'projects') {
+			history = [...history, { kind: 'projects' }];
 			return;
 		}
 
@@ -698,6 +704,8 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 								<RouteLinks path={line.path} entries={childLinks(line.path)} />
 							{:else if line.kind === 'socials'}
 								<SocialLinks />
+							{:else if line.kind === 'projects'}
+								<ProjectsTable />
 							{:else if line.kind === 'banner'}
 								<WelcomeBanner {posts} onCommand={runShortcut} />
 							{:else if line.kind === 'help'}

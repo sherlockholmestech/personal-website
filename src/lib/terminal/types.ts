@@ -6,6 +6,7 @@ export type ShellLine =
 	| { kind: 'prompt'; command: string; cwd: string }
 	| { kind: 'links'; path: string }
 	| { kind: 'socials' }
+	| { kind: 'projects' }
 	| { kind: 'banner' }
 	| { kind: 'help' }
 	| { kind: 'markdown'; markdown: string };
