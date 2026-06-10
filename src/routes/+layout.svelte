@@ -13,7 +13,7 @@
 	<link rel="icon" href="/icon.svg" />
 	<link
 		rel="preload"
-		href="/fonts/sarasa-mono-sc-regular-nerd-font.woff2"
+		href="/fonts/sarasa-mono-sc-regular-nerd-font-base.woff2"
 		as="font"
 		type="font/woff2"
 		crossorigin="anonymous"

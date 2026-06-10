@@ -1,6 +1,24 @@
 @font-face {
 	font-family: 'Sarasa SC Mono Nerd Font';
-	src: url('/fonts/sarasa-mono-sc-italic-nerd-font.woff2') format('woff2');
+	src: url('/fonts/sarasa-mono-sc-italic-nerd-font-icons.woff2') format('woff2');
+	font-weight: 400;
+	font-style: italic;
+	font-display: swap;
+	unicode-range: U+E000-F8FF, U+F0000-FFFFF, U+100000-10FFFF;
+}
+
+@font-face {
+	font-family: 'Sarasa SC Mono Nerd Font';
+	src: url('/fonts/sarasa-mono-sc-italic-nerd-font-cjk.woff2') format('woff2');
+	font-weight: 400;
+	font-style: italic;
+	font-display: swap;
+	unicode-range: U+3000-303F, U+4E00-9FFF, U+FF00-FFEF;
+}
+
+@font-face {
+	font-family: 'Sarasa SC Mono Nerd Font';
+	src: url('/fonts/sarasa-mono-sc-italic-nerd-font-base.woff2') format('woff2');
 	font-weight: 400;
 	font-style: italic;
 	font-display: swap;
@@ -8,7 +26,25 @@
 
 @font-face {
 	font-family: 'Sarasa SC Mono Nerd Font';
-	src: url('/fonts/sarasa-mono-sc-semibold-nerd-font.woff2') format('woff2');
+	src: url('/fonts/sarasa-mono-sc-semibold-nerd-font-icons.woff2') format('woff2');
+	font-weight: 600;
+	font-style: normal;
+	font-display: swap;
+	unicode-range: U+E000-F8FF, U+F0000-FFFFF, U+100000-10FFFF;
+}
+
+@font-face {
+	font-family: 'Sarasa SC Mono Nerd Font';
+	src: url('/fonts/sarasa-mono-sc-semibold-nerd-font-cjk.woff2') format('woff2');
+	font-weight: 600;
+	font-style: normal;
+	font-display: swap;
+	unicode-range: U+3000-303F, U+4E00-9FFF, U+FF00-FFEF;
+}
+
+@font-face {
+	font-family: 'Sarasa SC Mono Nerd Font';
+	src: url('/fonts/sarasa-mono-sc-semibold-nerd-font-base.woff2') format('woff2');
 	font-weight: 600;
 	font-style: normal;
 	font-display: swap;
@@ -16,7 +52,25 @@
 
 @font-face {
 	font-family: 'Sarasa SC Mono Nerd Font';
-	src: url('/fonts/sarasa-mono-sc-semibolditalic-nerd-font.woff2') format('woff2');
+	src: url('/fonts/sarasa-mono-sc-semibolditalic-nerd-font-icons.woff2') format('woff2');
+	font-weight: 600;
+	font-style: italic;
+	font-display: swap;
+	unicode-range: U+E000-F8FF, U+F0000-FFFFF, U+100000-10FFFF;
+}
+
+@font-face {
+	font-family: 'Sarasa SC Mono Nerd Font';
+	src: url('/fonts/sarasa-mono-sc-semibolditalic-nerd-font-cjk.woff2') format('woff2');
+	font-weight: 600;
+	font-style: italic;
+	font-display: swap;
+	unicode-range: U+3000-303F, U+4E00-9FFF, U+FF00-FFEF;
+}
+
+@font-face {
+	font-family: 'Sarasa SC Mono Nerd Font';
+	src: url('/fonts/sarasa-mono-sc-semibolditalic-nerd-font-base.woff2') format('woff2');
 	font-weight: 600;
 	font-style: italic;
 	font-display: swap;
@@ -24,7 +78,25 @@
 
 @font-face {
 	font-family: 'Sarasa SC Mono Nerd Font';
-	src: url('/fonts/sarasa-mono-sc-bold-nerd-font.woff2') format('woff2');
+	src: url('/fonts/sarasa-mono-sc-bold-nerd-font-icons.woff2') format('woff2');
+	font-weight: 700;
+	font-style: normal;
+	font-display: swap;
+	unicode-range: U+E000-F8FF, U+F0000-FFFFF, U+100000-10FFFF;
+}
+
+@font-face {
+	font-family: 'Sarasa SC Mono Nerd Font';
+	src: url('/fonts/sarasa-mono-sc-bold-nerd-font-cjk.woff2') format('woff2');
+	font-weight: 700;
+	font-style: normal;
+	font-display: swap;
+	unicode-range: U+3000-303F, U+4E00-9FFF, U+FF00-FFEF;
+}
+
+@font-face {
+	font-family: 'Sarasa SC Mono Nerd Font';
+	src: url('/fonts/sarasa-mono-sc-bold-nerd-font-base.woff2') format('woff2');
 	font-weight: 700;
 	font-style: normal;
 	font-display: swap;
@@ -32,7 +104,25 @@
 
 @font-face {
 	font-family: 'Sarasa SC Mono Nerd Font';
-	src: url('/fonts/sarasa-mono-sc-bolditalic-nerd-font.woff2') format('woff2');
+	src: url('/fonts/sarasa-mono-sc-bolditalic-nerd-font-icons.woff2') format('woff2');
+	font-weight: 700;
+	font-style: italic;
+	font-display: swap;
+	unicode-range: U+E000-F8FF, U+F0000-FFFFF, U+100000-10FFFF;
+}
+
+@font-face {
+	font-family: 'Sarasa SC Mono Nerd Font';
+	src: url('/fonts/sarasa-mono-sc-bolditalic-nerd-font-cjk.woff2') format('woff2');
+	font-weight: 700;
+	font-style: italic;
+	font-display: swap;
+	unicode-range: U+3000-303F, U+4E00-9FFF, U+FF00-FFEF;
+}
+
+@font-face {
+	font-family: 'Sarasa SC Mono Nerd Font';
+	src: url('/fonts/sarasa-mono-sc-bolditalic-nerd-font-base.woff2') format('woff2');
 	font-weight: 700;
 	font-style: italic;
 	font-display: swap;
