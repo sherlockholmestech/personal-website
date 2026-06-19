@@ -1,4 +1,4 @@
-import { loadPost, loadPostMetas } from '$lib/blog';
+import { loadAboutPost, loadPost, loadPostMetas } from '$lib/blog';
 
 export function load({ params }: { params: { slug: string } }) {
 	const data = loadPostMetas();
@@ -7,6 +7,7 @@ export function load({ params }: { params: { slug: string } }) {
 
 	return {
 		...data,
+		about: loadAboutPost(),
 		post,
 		requestedPath,
 		notFound: !data.posts.some(

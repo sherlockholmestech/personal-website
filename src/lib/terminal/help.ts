@@ -17,7 +17,7 @@ export const commandCatalog: CommandHelp[] = [
 	},
 	{
 		command: 'about',
-		description: 'Read the short bio.',
+		description: 'Open the about article.',
 		group: 'start'
 	},
 	{

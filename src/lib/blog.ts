@@ -1,5 +1,6 @@
 import matter from 'gray-matter';
 import type { BlogPost, BlogPostMeta } from '$lib/terminal/types';
+import aboutRaw from '../content/about.md?raw';
 
 type Frontmatter = {
 	title?: string;
@@ -13,6 +14,8 @@ const modules = import.meta.glob('/src/content/blog/**/*.mdx', {
 	import: 'default',
 	query: '?raw'
 }) as Record<string, string>;
+
+const ABOUT_FILE_PATH = '/src/content/about.md';
 
 export function loadPosts() {
 	const posts = Object.entries(modules)
@@ -35,6 +38,10 @@ export function loadPost(path: string) {
 	const entry = Object.entries(modules).find(([filePath]) => postPath(filePath) === normalizedPath);
 
 	return entry ? toPost(entry[0], entry[1]) : undefined;
+}
+
+export function loadAboutPost() {
+	return toPost(ABOUT_FILE_PATH, aboutRaw);
 }
 
 function toPost(filePath: string, raw: string): BlogPost {
@@ -67,7 +74,7 @@ function toMeta(filePath: string, frontmatter: Frontmatter): BlogPostMeta {
 function postPath(filePath: string) {
 	return filePath
 		.replace('/src/content/', '')
-		.replace(/\.mdx$/, '')
+		.replace(/\.mdx?$/, '')
 		.replace(/\/index$/, '');
 }
 

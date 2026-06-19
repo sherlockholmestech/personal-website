@@ -8,8 +8,7 @@ export type ShellLine =
 	| { kind: 'socials' }
 	| { kind: 'projects' }
 	| { kind: 'banner' }
-	| { kind: 'help' }
-	| { kind: 'markdown'; markdown: string };
+	| { kind: 'help' };
 
 export type BlogPostMeta = {
 	path: string;

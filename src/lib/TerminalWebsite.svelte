@@ -19,7 +19,6 @@
 	import type { BlogPost, BlogPostMeta, BlogSort, ShellLine, Theme } from '$lib/terminal/types';
 	import BlogBrowser from '$lib/terminal/components/BlogBrowser.svelte';
 	import HelpPanel from '$lib/terminal/components/HelpPanel.svelte';
-	import MarkdownBlocks from '$lib/terminal/components/MarkdownBlocks.svelte';
 	import PostReader from '$lib/terminal/components/PostReader.svelte';
 	import ProjectsTable from '$lib/terminal/components/ProjectsTable.svelte';
 	import PromptForm from '$lib/terminal/components/PromptForm.svelte';
@@ -27,25 +26,21 @@
 	import SocialLinks from '$lib/terminal/components/SocialLinks.svelte';
 	import WelcomeBanner from '$lib/terminal/components/WelcomeBanner.svelte';
 
-	const ABOUT_MARKDOWN = `# About
-
-Hello! I'm Sherlock, an average programmer that enjoys CTFs as a side quest.
-
-You can also find me in the Model United Nations circuit occasionally.
-
-I primarily program in Rust, though I have dipped my toes (maybe a bit too much) into web development.`;
+	const ABOUT_PATH = 'about';
 
 	let {
 		data
 	}: {
 		data: {
 			posts: BlogPostMeta[];
+			about: BlogPost;
 			post?: BlogPost;
 			requestedPath?: string;
 			notFound?: boolean;
 		};
 	} = $props();
 	let posts = $derived(data.posts);
+	let aboutPost = $derived(data.about);
 	let loadedPost = $derived(data.post);
 	let requestedPath = $derived(data.requestedPath);
 	let routeNotFound = $derived(data.notFound);
@@ -80,6 +75,8 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 	let fileSystem = $derived(createFileSystem(posts));
 	let selectedPost = $derived<BlogPostMeta>(
 		posts.find((post) => post.path === selectedPath) ??
+			(loadedPost?.path === selectedPath ? loadedPost : undefined) ??
+			(aboutPost.path === selectedPath ? aboutPost : undefined) ??
 			loadedPost ?? {
 				path: '',
 				title: '',
@@ -88,7 +85,13 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 				tags: []
 			}
 	);
-	let selectedFullPost = $derived(loadedPost?.path === selectedPath ? loadedPost : undefined);
+	let selectedFullPost = $derived(
+		loadedPost?.path === selectedPath
+			? loadedPost
+			: aboutPost.path === selectedPath
+				? aboutPost
+				: undefined
+	);
 	let parsedPost = $derived(
 		selectedFullPost ? parseMarkdown(selectedFullPost.markdown, highlightedCode) : []
 	);
@@ -192,7 +195,7 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 					{ kind: 'error', text: `404: no blog post found at ${requestedPath}` }
 				];
 			} else {
-				if (posts.some((post) => post.path === requestedPath)) {
+				if (loadedPost?.path === requestedPath || aboutPost.path === requestedPath) {
 					selectedPath = requestedPath;
 					currentView = 'post';
 				} else {
@@ -347,7 +350,7 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 		}
 
 		if (name === 'about') {
-			history = [...history, { kind: 'markdown', markdown: ABOUT_MARKDOWN }];
+			openAboutPost();
 			return;
 		}
 
@@ -482,6 +485,13 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 		blogBrowserVisible = false;
 		currentView = 'post';
 		void updateUrlForView(entry.post.path);
+	}
+
+	function openAboutPost() {
+		selectedPath = aboutPost.path;
+		blogBrowserVisible = false;
+		currentView = 'post';
+		void updateUrlForView(aboutPost.path);
 	}
 
 	async function openBlogSearch() {
@@ -622,7 +632,11 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 	}
 
 	async function updateUrlForView(path?: string) {
-		const route = path ? resolve(`/${path}` as `/blog/${string}`) : resolve('/');
+		let route = resolve('/');
+		if (path) {
+			route =
+				path === ABOUT_PATH ? resolve('/about' as const) : resolve(`/${path}` as `/blog/${string}`);
+		}
 		await goto(route, {
 			keepFocus: true,
 			noScroll: true,
@@ -710,12 +724,6 @@ I primarily program in Rust, though I have dipped my toes (maybe a bit too much)
 								<WelcomeBanner {posts} onCommand={runShortcut} />
 							{:else if line.kind === 'help'}
 								<HelpPanel />
-							{:else if line.kind === 'markdown'}
-								<div class="mt-3 border-b border-[var(--border)]">
-									<div class="terminal-prose terminal-prose-body">
-										<MarkdownBlocks blocks={parseMarkdown(line.markdown, {})} />
-									</div>
-								</div>
 							{:else}
 								<pre
 									class={`terminal-output-line ${line.kind === 'success' ? 'text-[var(--green)]' : line.kind === 'error' ? 'text-[var(--red)]' : line.kind === 'muted' ? 'text-[var(--tx-2)]' : ''}`}>{line.text}</pre>
