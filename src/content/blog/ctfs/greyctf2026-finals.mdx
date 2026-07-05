@@ -1,0 +1,67 @@
+---
+title: GreyCTF 2026 Finals Writeups
+date: 2026-07-05
+description: 'NFC!'
+tags: ['ctf', 'misc']
+---
+
+From the 27th to 28th of June 2026, I participated as a finalist for GreyCTF 2026, managing to clinch 2nd local and 8th international in the competition. It was quite a refresher to do CTFs without any AI assistance, and I thoroughly enjoyed playing this rendition of GreyCTF. Here are my writeups for the interesting challenges.
+# Low Cortisol Gachapon - Misc
+This was an onstage challenge that involved a lego gachapon machine. The goal is to hack it to dispense a gachapon with a NFC card, thereby getting the flag.
+
+I was really vexed that r3kapig (no rev/pwn no life) got the first blood 6 minutes before me because I forgot about a CRC32 check. Nonetheless, this was a very interesting MiFare Card hacking challenge, and a very good introduction into NFC cards for me.
+
+In the challenge, we are presented with a single binary (6.8mb large btw). Throwing into Binary Ninja, we observe that this is a RISC-V 32bit binary.
+
+![arch](/images/ctf/greyctf2026/finals/arch.png)
+
+Looking into the binary, we see that we are dropped into `call_start_cpu0()` as our main function. So this is probably some embedded device binary. Looking through the functions, we see many references to ESP, which signals the gachapon machine runs on an ESP32-like platform. At this point, I was quite lost, so I decided to give it a shot, searching for functions with the word main.
+
+![main function](/images/ctf/greyctf2026/finals/main_fn.png)
+
+And would you look at that, we have `app_main()` that seems to set up a task with `loopTask()`. Taking a look into `loopTask()`, we see that it calls `loop()`:
+
+![loopTask](/images/ctf/greyctf2026/finals/loopTask.png)
+
+And loop basically contains the main logic of the program.
+
+![loop](/images/ctf/greyctf2026/finals/loop.png)
+
+We can see that there is an Adafruit PN532 NFC card reader in the gachapon machine, and it dispenses the balls by moving the servo if we have enough balance.
+
+![checkCardBalance](/images/ctf/greyctf2026/finals/checkcardbal.png)
+
+After looking into `checkCardBalance()` and doing some simple annotations, we can see that the ESP32 attempts to read off blocks 16 and 17 of a MiFare Classic 1k Card. In the card specifications, data is stored in multiple sectors, each containing 4 blocks, with the last block being used for permissions management of the entire sector. Each block can store up to `0x10` bytes of data. Of particular interest to us is sector 4, which consists of blocks 16 and 17.
+
+![mifare spec](/images/ctf/greyctf2026/finals/mifare-spec.png)
+
+We can see that blocks 16 and 17 are both read into a `0x20` sized record array, and that it checks for a `GREYGachaCard` marker at offset `0xd`. Hence, the first 14 bytes of the block are for the marker, followed by a `0x01` byte which is checked for after the marker. Beyond that, the next 4 bytes are for the stored value of the card, and the next 4 bytes are for the CRC32 check of all the values in blocks 16 and 17 as of now. Here is it annotated in the NFC dump acquired from the original card where red is the marker, green is the `0x01` byte, orange is the card value and blue is the CRC32 check:
+
+![annotated mifare segments](/images/ctf/greyctf2026/finals/annotated-mifare-segments.png)
+
+Hence, we can just overwrite the value of the card to our own value (i.e. `0xFFFFFFFF`), and recompute the CRC hash:
+
+```python
+data = b"\x47\x52\x45\x59\x47\x61\x63\x68\x61\x43\x61\x72\x64\x01\xff\xff\xff\xff"
+
+# this is copied from the rev of their crc32 algo
+def crc(buf, l):
+    a5 = 0xFFFFFFFF
+    for i in range(l):
+        a5 ^= buf[i]
+        for j in range(8, 0, -1):
+            a6_1 = a5 & 1
+            a5 >>= 1
+            if a6_1:
+                a5 ^= 0xEDB88320
+    return a5 ^ 0xFFFFFFFF
+
+
+print(hex(crc(data, 0x12)))
+```
+
+Then we can just modify the NFC dump, re-upload it onto the flipper zero, and profit by getting the gacha ball!
+
+![solve gacha](/images/ctf/greyctf2026/finals/solve-gacha.png)
+
+This was a very cool and interesting primer into NFC hacking for me, and I learnt a lot about how NFC data is stored by reading NFC specifications (wow so hardworking!).

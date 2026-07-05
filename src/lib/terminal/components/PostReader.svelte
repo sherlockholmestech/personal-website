@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	import type { BlogPost, MdBlock } from '../types';
 	import { formatPostDate } from '../date';
 	import MarkdownBlocks from './MarkdownBlocks.svelte';
@@ -12,6 +13,10 @@
 	let { post, blocks }: { post: BlogPost; blocks: MdBlock[] } = $props();
 	let contentViewport = $state<HTMLDivElement>();
 	let mobileTocOpen = $state(false);
+	let zoomedImage = $state<{ src: string; alt: string } | null>(null);
+	let imageZoomLevel = $state(0);
+	let imageZoomScroll = $state<HTMLDivElement>();
+	let imageZoomTarget = $state<HTMLImageElement>();
 	let toc = $derived<TocItem[]>([
 		{ id: 'post-top', level: 1, text: post.title },
 		...blocks
@@ -65,7 +70,117 @@
 		'mt-[4px] pl-[52px] border-l border-[var(--border)] text-[12px]',
 		'mt-[4px] pl-[52px] border-l border-[var(--border)] text-[12px]'
 	];
+	const imageZoomClasses = ['image-zoom-level-1', 'image-zoom-level-2'];
+
+	$effect(() => {
+		decorateMarkdownImages(blocks);
+	});
+
+	$effect(() => {
+		const viewport = contentViewport;
+		if (!viewport) return;
+
+		viewport.addEventListener('click', handleContentClick);
+		viewport.addEventListener('keydown', handleContentKeydown);
+
+		return () => {
+			viewport.removeEventListener('click', handleContentClick);
+			viewport.removeEventListener('keydown', handleContentKeydown);
+		};
+	});
+
+	function decorateMarkdownImages(currentBlocks: MdBlock[]) {
+		if (!contentViewport || !currentBlocks.length) return;
+
+		const images = contentViewport.querySelectorAll<HTMLImageElement>('.terminal-prose-body img');
+		for (const image of images) {
+			image.tabIndex = 0;
+			image.setAttribute('role', 'button');
+			image.setAttribute('aria-label', image.alt ? `Zoom image: ${image.alt}` : 'Zoom image');
+		}
+	}
+
+	function imageFromTarget(target: EventTarget | null) {
+		if (!(target instanceof Element)) return null;
+		return target.closest<HTMLImageElement>('.terminal-prose-body img');
+	}
+
+	async function openImageZoom(image: HTMLImageElement, xRatio = 0.5, yRatio = 0.5) {
+		zoomedImage = {
+			src: image.currentSrc || image.src,
+			alt: image.alt || 'Zoomed post image'
+		};
+		imageZoomLevel = 0;
+		await tick();
+		centerZoomPoint(xRatio, yRatio);
+	}
+
+	function handleContentClick(event: MouseEvent) {
+		const image = imageFromTarget(event.target);
+		if (!image) return;
+
+		event.preventDefault();
+		const rect = image.getBoundingClientRect();
+		void openImageZoom(
+			image,
+			clamp((event.clientX - rect.left) / rect.width, 0, 1),
+			clamp((event.clientY - rect.top) / rect.height, 0, 1)
+		);
+	}
+
+	function handleContentKeydown(event: KeyboardEvent) {
+		if (event.key !== 'Enter' && event.key !== ' ') return;
+
+		const image = imageFromTarget(event.target);
+		if (!image) return;
+
+		event.preventDefault();
+		void openImageZoom(image);
+	}
+
+	function closeImageZoom() {
+		zoomedImage = null;
+		imageZoomLevel = 0;
+	}
+
+	async function toggleImageZoom(event: MouseEvent) {
+		const targetRect = imageZoomTarget?.getBoundingClientRect();
+		const xRatio = targetRect
+			? clamp((event.clientX - targetRect.left) / targetRect.width, 0, 1)
+			: 0.5;
+		const yRatio = targetRect
+			? clamp((event.clientY - targetRect.top) / targetRect.height, 0, 1)
+			: 0.5;
+
+		imageZoomLevel = imageZoomLevel === 0 ? 1 : 0;
+		await tick();
+		centerZoomPoint(xRatio, yRatio);
+	}
+
+	function handleWindowKeydown(event: KeyboardEvent) {
+		if (event.key === 'Escape' && zoomedImage) {
+			closeImageZoom();
+		}
+	}
+
+	function centerZoomPoint(xRatio: number, yRatio: number) {
+		if (!imageZoomScroll || !imageZoomTarget) return;
+
+		const scrollRect = imageZoomScroll.getBoundingClientRect();
+		const targetRect = imageZoomTarget.getBoundingClientRect();
+		const pointX = targetRect.left + targetRect.width * xRatio;
+		const pointY = targetRect.top + targetRect.height * yRatio;
+
+		imageZoomScroll.scrollLeft += pointX - (scrollRect.left + imageZoomScroll.clientWidth / 2);
+		imageZoomScroll.scrollTop += pointY - (scrollRect.top + imageZoomScroll.clientHeight / 2);
+	}
+
+	function clamp(value: number, min: number, max: number) {
+		return Math.min(max, Math.max(min, value));
+	}
 </script>
+
+<svelte:window onkeydown={handleWindowKeydown} />
 
 <article class="post-reader">
 	<div class="post-toc-bar">
@@ -97,7 +212,13 @@
 		{/each}
 	</nav>
 
-	<div bind:this={contentViewport} class="post-content-viewport" onscroll={handleScroll}>
+	<div
+		bind:this={contentViewport}
+		class="post-content-viewport"
+		role="region"
+		aria-label="post content"
+		onscroll={handleScroll}
+	>
 		<div class="post-content">
 			<header class="post-header">
 				<h1 id="post-top" data-heading-id="post-top" class="post-title">
@@ -130,4 +251,34 @@
 			</div>
 		</div>
 	</div>
+
+	{#if zoomedImage}
+		<div class="image-zoom-overlay" role="dialog" aria-modal="true" aria-label="Zoomed image">
+			<div bind:this={imageZoomScroll} class="image-zoom-scroll">
+				<div class="image-zoom-stage">
+					<button
+						type="button"
+						class="image-zoom-frame"
+						aria-label="Toggle image zoom"
+						onclick={toggleImageZoom}
+					>
+						<img
+							bind:this={imageZoomTarget}
+							src={zoomedImage.src}
+							alt={zoomedImage.alt}
+							class={`image-zoom-target ${imageZoomClasses[imageZoomLevel]}`}
+						/>
+					</button>
+				</div>
+			</div>
+			<button
+				type="button"
+				class="image-zoom-close"
+				aria-label="Close zoomed image"
+				onclick={closeImageZoom}
+			>
+				X
+			</button>
+		</div>
+	{/if}
 </article>
