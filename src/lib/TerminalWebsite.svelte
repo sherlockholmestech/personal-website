@@ -19,6 +19,7 @@
 	import type { BlogPost, BlogPostMeta, BlogSort, ShellLine, Theme } from '$lib/terminal/types';
 	import BlogBrowser from '$lib/terminal/components/BlogBrowser.svelte';
 	import HelpPanel from '$lib/terminal/components/HelpPanel.svelte';
+	import NotFoundPanel from '$lib/terminal/components/NotFoundPanel.svelte';
 	import PostReader from '$lib/terminal/components/PostReader.svelte';
 	import ProjectsTable from '$lib/terminal/components/ProjectsTable.svelte';
 	import PromptForm from '$lib/terminal/components/PromptForm.svelte';
@@ -27,6 +28,9 @@
 	import WelcomeBanner from '$lib/terminal/components/WelcomeBanner.svelte';
 
 	const ABOUT_PATH = 'about';
+	const SITE_TITLE = 'Sherlock Holmes';
+	const SITE_DESCRIPTION =
+		"Sherlock Holmes' terminal-style personal blog on CTFs, Rust, web development, and Model United Nations.";
 
 	let {
 		data
@@ -115,6 +119,9 @@
 	let terminalTitleText = $derived(
 		currentView === 'post' ? selectedPost.title : 'Sherlock Holmes // personal blog'
 	);
+	let metaPost = $derived(loadedPost);
+	let metaTitle = $derived(metaPost ? `${metaPost.title} | ${SITE_TITLE}` : SITE_TITLE);
+	let metaDescription = $derived(metaPost?.description || SITE_DESCRIPTION);
 
 	$effect(() => {
 		if (!selectedPath && posts.length) {
@@ -190,10 +197,7 @@
 	$effect(() => {
 		if (requestedPath && initializedRoutePath !== requestedPath) {
 			if (routeNotFound) {
-				history = [
-					...history,
-					{ kind: 'error', text: `404: no blog post found at ${requestedPath}` }
-				];
+				history = [{ kind: 'not-found', path: requestedPath }];
 			} else {
 				if (loadedPost?.path === requestedPath || aboutPost.path === requestedPath) {
 					selectedPath = requestedPath;
@@ -651,11 +655,13 @@
 </script>
 
 <svelte:head>
-	<title>Sherlock Holmes</title>
-	<meta
-		name="description"
-		content="Sherlock Holmes' terminal-style personal blog on CTFs, Rust, web development, and Model United Nations."
-	/>
+	<title>{metaTitle}</title>
+	<meta name="description" content={metaDescription} />
+	<meta property="og:title" content={metaTitle} />
+	<meta property="og:description" content={metaDescription} />
+	<meta name="twitter:card" content="summary" />
+	<meta name="twitter:title" content={metaTitle} />
+	<meta name="twitter:description" content={metaDescription} />
 </svelte:head>
 
 <main class:light={theme === 'light'} class="workspace terminal-workspace">
@@ -724,6 +730,8 @@
 								<WelcomeBanner {posts} onCommand={runShortcut} />
 							{:else if line.kind === 'help'}
 								<HelpPanel />
+							{:else if line.kind === 'not-found'}
+								<NotFoundPanel path={line.path} onCommand={runShortcut} />
 							{:else}
 								<pre
 									class={`terminal-output-line ${line.kind === 'success' ? 'text-[var(--green)]' : line.kind === 'error' ? 'text-[var(--red)]' : line.kind === 'muted' ? 'text-[var(--tx-2)]' : ''}`}>{line.text}</pre>

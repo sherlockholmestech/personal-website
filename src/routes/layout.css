@@ -492,6 +492,47 @@
 		@apply mb-[6px] flex justify-between gap-[12px] text-[var(--tx-2)] max-[760px]:grid max-[760px]:grid-cols-1 max-[760px]:gap-[2px];
 	}
 
+	.not-found-panel {
+		@apply my-[8px] grid max-w-[86ch] gap-[10px] border-l-2 border-[var(--red)] bg-[color-mix(in_srgb,_var(--bg-2)_44%,_transparent)] px-[12px] py-[11px] max-[760px]:mx-[2px] max-[760px]:gap-[9px] max-[760px]:px-[10px] max-[760px]:py-[10px];
+	}
+
+	.not-found-code {
+		@apply inline-flex min-h-[24px] flex-none items-center border border-[var(--red)] px-[5px] py-[1px] text-[15px] leading-[1.1] font-bold text-[var(--red)] max-[760px]:mt-[1px] max-[760px]:text-[14px];
+	}
+
+	.not-found-title {
+		@apply m-0 flex min-w-0 flex-wrap items-center gap-[10px] text-[18px] leading-[1.25] font-bold text-[var(--yellow)] max-[760px]:gap-[8px] max-[760px]:text-[17px];
+	}
+
+	.not-found-trace {
+		@apply grid grid-cols-[auto_auto_minmax(0,1fr)] items-baseline gap-[8px] text-[15px] leading-[1.4] max-[760px]:text-[16px];
+	}
+
+	.not-found-trace span:last-child {
+		@apply min-w-0 text-[var(--tx)];
+		overflow-wrap: anywhere;
+	}
+
+	.not-found-message {
+		@apply m-0 max-w-[68ch] text-[15px] leading-[1.45] text-[var(--tx-2)] max-[760px]:text-[16px];
+	}
+
+	.not-found-suggestions {
+		@apply grid grid-cols-[4ch_minmax(0,1fr)] items-start gap-[10px] max-[760px]:grid-cols-1 max-[760px]:gap-[6px];
+	}
+
+	.not-found-label {
+		@apply font-bold text-[var(--yellow)];
+	}
+
+	.not-found-actions {
+		@apply flex flex-wrap gap-[8px];
+	}
+
+	.not-found-action {
+		@apply inline-flex items-center no-underline focus-visible:outline-none;
+	}
+
 	.welcome-banner {
 		@apply my-[8px] mb-[18px] grid grid-cols-[minmax(180px,0.24fr)_minmax(0,1fr)] justify-items-start gap-[18px] border-b border-[var(--border)] py-[8px] pb-[16px] max-[760px]:mb-[12px] max-[760px]:grid-cols-1 max-[760px]:gap-[10px] max-[760px]:pb-[12px];
 	}
