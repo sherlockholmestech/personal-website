@@ -1,5 +1,5 @@
 import { marked, type Tokens } from 'marked';
-import type { MdBlock, Theme } from './types';
+import type { MdBlock } from './types';
 
 marked.use({
 	breaks: true
@@ -60,7 +60,7 @@ export function parseMarkdown(
 	});
 }
 
-export async function highlightMarkdownCode(markdown: string, theme: Theme) {
+export async function highlightMarkdownCode(markdown: string) {
 	const codeBlocks = marked
 		.lexer(markdown)
 		.filter((token): token is Tokens.Code => token.type === 'code');
@@ -71,13 +71,13 @@ export async function highlightMarkdownCode(markdown: string, theme: Theme) {
 	const entries = await Promise.all(
 		codeBlocks.map(async (block) => {
 			const code = codeBlockInfo(block);
-			const key = highlightCacheKey(code.text, code.language, theme);
+			const key = highlightCacheKey(code.text, code.language);
 			const cachedHtml = highlightedCodeCache.get(key);
 			const html =
 				cachedHtml ??
 				(await codeToHtml(code.text, {
 					lang: code.language,
-					theme: theme === 'dark' ? 'vitesse-dark' : 'vitesse-light'
+					theme: 'vitesse-dark'
 				}));
 			highlightedCodeCache.set(key, html);
 			return [code.key, html] as const;
@@ -101,8 +101,8 @@ function codeBlockInfo(block: Tokens.Code) {
 	};
 }
 
-function highlightCacheKey(code: string, language: string, theme: Theme) {
-	return `${theme}:${language}:${code}`;
+function highlightCacheKey(code: string, language: string) {
+	return `${language}:${code}`;
 }
 
 function inlineHtml(value: string) {

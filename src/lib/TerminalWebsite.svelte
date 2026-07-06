@@ -23,8 +23,7 @@
 		type BlogPost,
 		type BlogPostMeta,
 		type BlogSort,
-		type ShellLine,
-		type Theme
+		type ShellLine
 	} from '$lib/terminal/types';
 	import BlogBrowser from '$lib/terminal/components/BlogBrowser.svelte';
 	import HelpPanel from '$lib/terminal/components/HelpPanel.svelte';
@@ -64,7 +63,6 @@
 	let fzfIndex = $state(0);
 	let blogSort = $state<BlogSort>(DEFAULT_BLOG_SORT);
 	let initializedRoutePath = $state<string>();
-	let theme = $state<Theme>('dark');
 	let terminalViewport = $state<HTMLDivElement>();
 	let terminalScrollback = $state<HTMLDivElement>();
 	let terminalTitlebar = $state<HTMLDivElement>();
@@ -112,7 +110,7 @@
 			? selectedFullPost.markdown
 			: previewMarkdownByPath[browserSelectedPost.path]
 	);
-	let browserPreviewHighlightKey = $derived(`${theme}:${browserSelectedPost.path}`);
+	let browserPreviewHighlightKey = $derived(browserSelectedPost.path);
 	let browserPreviewHighlightedCode = $derived(
 		previewHighlightedCodeByKey[browserPreviewHighlightKey] ?? {}
 	);
@@ -163,7 +161,7 @@
 
 	$effect(() => {
 		if (currentView === 'post' && selectedFullPost) {
-			void updateHighlightedCode(selectedFullPost.markdown, theme);
+			void updateHighlightedCode(selectedFullPost.markdown);
 		} else {
 			highlightedCode = {};
 		}
@@ -194,7 +192,7 @@
 			return;
 		}
 
-		void updatePreviewHighlightedCode(key, markdown, theme);
+		void updatePreviewHighlightedCode(key, markdown);
 	});
 
 	$effect(() => {
@@ -402,16 +400,6 @@
 			return;
 		}
 
-		if (name === 'theme') {
-			if (target === 'dark' || target === 'light') {
-				theme = target;
-				print([`theme set to flexoki ${target}`], 'success');
-			} else {
-				print(['usage: theme dark|light'], 'error');
-			}
-			return;
-		}
-
 		print([`${name}: command not found`], 'error');
 	}
 
@@ -614,21 +602,19 @@
 		history = [...history, ...lines.map((text) => ({ kind, text }))];
 	}
 
-	async function updateHighlightedCode(markdown: string, nextTheme: Theme) {
-		const nextHighlightedCode = await highlightMarkdownCode(markdown, nextTheme);
-		if (selectedFullPost?.markdown === markdown && theme === nextTheme) {
+	async function updateHighlightedCode(markdown: string) {
+		const nextHighlightedCode = await highlightMarkdownCode(markdown);
+		if (selectedFullPost?.markdown === markdown) {
 			highlightedCode = nextHighlightedCode;
 		}
 	}
 
-	async function updatePreviewHighlightedCode(key: string, markdown: string, nextTheme: Theme) {
-		const nextHighlightedCode = await highlightMarkdownCode(markdown, nextTheme);
-		if (theme === nextTheme) {
-			previewHighlightedCodeByKey = {
-				...previewHighlightedCodeByKey,
-				[key]: nextHighlightedCode
-			};
-		}
+	async function updatePreviewHighlightedCode(key: string, markdown: string) {
+		const nextHighlightedCode = await highlightMarkdownCode(markdown);
+		previewHighlightedCodeByKey = {
+			...previewHighlightedCodeByKey,
+			[key]: nextHighlightedCode
+		};
 	}
 
 	async function scrollToPrompt() {
@@ -667,7 +653,7 @@
 	<meta name="twitter:description" content={metaDescription} />
 </svelte:head>
 
-<main class:light={theme === 'light'} class="workspace terminal-workspace">
+<main class="workspace terminal-workspace">
 	<section class="terminal-shell">
 		<article class="terminal-window">
 			<div class="terminal-titlebar" bind:this={terminalTitlebar}>

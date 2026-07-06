@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	import { blogSortOptions, type BlogPostMeta, type BlogSort, type MdBlock } from '../types';
 	import { formatPostDate } from '../date';
 	import { isMobileViewport } from '../media';
@@ -37,9 +38,67 @@
 	} = $props();
 
 	let sortOpen = $state(false);
+	let resultsViewport = $state<HTMLDivElement>();
+	let canScrollUp = $state(false);
+	let canScrollDown = $state(false);
 	let sortLabel = $derived(
 		blogSortOptions.find((option) => option.value === sort)?.label ?? blogSortOptions[0].label
 	);
+
+	$effect(() => {
+		const viewport = resultsViewport;
+		const selectedPath = results[selectedIndex]?.path;
+		void scrollSelectedResultIntoView(viewport, selectedPath);
+	});
+
+	$effect(() => {
+		const viewport = resultsViewport;
+		if (!viewport) return;
+
+		const resizeObserver = new ResizeObserver(updateScrollIndicators);
+		resizeObserver.observe(viewport);
+		void tick().then(updateScrollIndicators);
+
+		return () => resizeObserver.disconnect();
+	});
+
+	function updateScrollIndicators() {
+		const viewport = resultsViewport;
+		if (!viewport || !results.length) {
+			canScrollUp = false;
+			canScrollDown = false;
+			return;
+		}
+
+		const threshold = 2;
+		canScrollUp = viewport.scrollTop > threshold;
+		canScrollDown = viewport.scrollTop + viewport.clientHeight < viewport.scrollHeight - threshold;
+	}
+
+	async function scrollSelectedResultIntoView(viewport = resultsViewport, selectedPath?: string) {
+		if (!viewport || !selectedPath) {
+			updateScrollIndicators();
+			return;
+		}
+
+		await tick();
+		const selectedRow = viewport.querySelector<HTMLElement>('.blog-browser-row-selected');
+		const header = viewport.querySelector<HTMLElement>('.blog-browser-results-header');
+		if (!selectedRow) return;
+
+		const viewportRect = viewport.getBoundingClientRect();
+		const rowRect = selectedRow.getBoundingClientRect();
+		const topLimit = viewportRect.top + (header?.offsetHeight ?? 0) + 14;
+		const bottomLimit = viewportRect.bottom - 30;
+
+		if (rowRect.top < topLimit) {
+			viewport.scrollTop -= topLimit - rowRect.top;
+		} else if (rowRect.bottom > bottomLimit) {
+			viewport.scrollTop += rowRect.bottom - bottomLimit;
+		}
+
+		updateScrollIndicators();
+	}
 
 	function toggleSortMenu() {
 		sortOpen = !sortOpen;
@@ -135,7 +194,7 @@
 		</label>
 	</div>
 	<div class="blog-browser-grid">
-		<div class="blog-browser-results" style="counter-reset: post-row">
+		<div class="blog-browser-results-shell">
 			{#if results.length}
 				<div class="blog-browser-results-header" aria-hidden="true">
 					<span>title</span>
@@ -143,38 +202,59 @@
 					<span>tags</span>
 					<span>path</span>
 				</div>
-				{#each results as post, index (post.path)}
-					<button
-						type="button"
-						class={`blog-browser-row ${index === selectedIndex ? 'blog-browser-row-selected' : 'text-[var(--tx)]'}`}
-						style="counter-increment: post-row"
-						onclick={() => handleResultClick(index)}
-						ondblclick={() => onOpen(index)}
-					>
-						<span
-							class="min-w-0 [overflow-wrap:anywhere] whitespace-normal max-[760px]:pointer-events-none max-[760px]:font-bold"
+			{/if}
+			<div
+				bind:this={resultsViewport}
+				class="blog-browser-results"
+				style="counter-reset: post-row"
+				onscroll={updateScrollIndicators}
+			>
+				{#if results.length}
+					{#each results as post, index (post.path)}
+						<button
+							type="button"
+							class={`blog-browser-row ${index === selectedIndex ? 'blog-browser-row-selected' : 'text-[var(--tx)]'}`}
+							style="counter-increment: post-row"
+							onclick={() => handleResultClick(index)}
+							ondblclick={() => onOpen(index)}
 						>
-							{post.title}
-						</span>
-						<span class="min-w-0 whitespace-normal opacity-[0.85] max-[760px]:pointer-events-none">
-							{formatPostDate(post.date)}
-						</span>
-						<span
-							class="flex min-w-0 flex-wrap gap-[6px] whitespace-normal opacity-[0.75] max-[760px]:pointer-events-none"
-						>
-							{#each post.tags as tag (tag)}
-								<span class="min-w-0 [overflow-wrap:anywhere]">#{tag}</span>
-							{/each}
-						</span>
-						<span
-							class="min-w-0 [overflow-wrap:anywhere] whitespace-normal opacity-[0.55] max-[760px]:pointer-events-none max-[760px]:before:content-['cat_']"
-						>
-							{post.path}
-						</span>
-					</button>
-				{/each}
-			{:else}
-				<div class="blog-browser-empty">no matching posts</div>
+							<span
+								class="min-w-0 [overflow-wrap:anywhere] whitespace-normal max-[760px]:pointer-events-none max-[760px]:font-bold"
+							>
+								{post.title}
+							</span>
+							<span
+								class="min-w-0 whitespace-normal opacity-[0.85] max-[760px]:pointer-events-none"
+							>
+								{formatPostDate(post.date)}
+							</span>
+							<span
+								class="flex min-w-0 flex-wrap gap-[6px] whitespace-normal opacity-[0.75] max-[760px]:pointer-events-none"
+							>
+								{#each post.tags as tag (tag)}
+									<span class="min-w-0 [overflow-wrap:anywhere]">#{tag}</span>
+								{/each}
+							</span>
+							<span
+								class="min-w-0 [overflow-wrap:anywhere] whitespace-normal opacity-[0.55] max-[760px]:pointer-events-none max-[760px]:before:content-['cat_']"
+							>
+								{post.path}
+							</span>
+						</button>
+					{/each}
+				{:else}
+					<div class="blog-browser-empty">no matching posts</div>
+				{/if}
+			</div>
+			{#if canScrollUp}
+				<div class="blog-browser-scroll-hint blog-browser-scroll-hint-top" aria-hidden="true">
+					more above ↑
+				</div>
+			{/if}
+			{#if canScrollDown}
+				<div class="blog-browser-scroll-hint blog-browser-scroll-hint-bottom" aria-hidden="true">
+					more posts below ↓
+				</div>
 			{/if}
 		</div>
 		<div class="blog-browser-preview">

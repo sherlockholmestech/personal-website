@@ -1,4 +1,3 @@
-export type Theme = 'dark' | 'light';
 export const blogSortOptions = [
 	{ value: 'date-desc', label: 'newest' },
 	{ value: 'date-asc', label: 'oldest' },
