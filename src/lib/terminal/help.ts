@@ -83,4 +83,3 @@ export const commandCatalog: CommandHelp[] = [
 ];
 
 export const helpfulCommands = ['blog', 'projects', 'about', 'links', 'help', 'home', 'clear'];
-export const commandExamples = commandCatalog.map((entry) => entry.command);

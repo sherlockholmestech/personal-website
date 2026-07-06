@@ -1,8 +1,5 @@
-import { loadAboutPost, loadPostMetas } from '$lib/blog';
+import { loadTerminalPageData } from '$lib/blog';
 
 export function load() {
-	return {
-		...loadPostMetas(),
-		about: loadAboutPost()
-	};
+	return loadTerminalPageData();
 }

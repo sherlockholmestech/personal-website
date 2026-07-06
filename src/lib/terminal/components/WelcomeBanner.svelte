@@ -32,7 +32,7 @@
 			<div class="welcome-summary-row">
 				<span class="welcome-label">does</span>
 				<strong class="welcome-summary-value"
-					>Software Enginnering, Capture the Flag (pwn/forensics main), Model United Nations</strong
+					>Software Engineering, Capture the Flag (pwn/forensics main), Model United Nations</strong
 				>
 			</div>
 			<div class="welcome-summary-row">

@@ -1,5 +1,12 @@
 export type Theme = 'dark' | 'light';
-export type BlogSort = 'date-desc' | 'date-asc' | 'title-asc' | 'path-asc';
+export const blogSortOptions = [
+	{ value: 'date-desc', label: 'newest' },
+	{ value: 'date-asc', label: 'oldest' },
+	{ value: 'title-asc', label: 'title' },
+	{ value: 'path-asc', label: 'path' }
+] as const;
+export type BlogSort = (typeof blogSortOptions)[number]['value'];
+export const DEFAULT_BLOG_SORT: BlogSort = 'date-desc';
 export type LineKind = 'prompt' | 'output' | 'success' | 'error' | 'muted';
 export type ShellLine =
 	| { kind: Exclude<LineKind, 'prompt'>; text: string }

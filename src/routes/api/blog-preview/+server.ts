@@ -1,5 +1,5 @@
 import { json } from '@sveltejs/kit';
-import { loadPost } from '$lib/blog';
+import { loadPost, postPreviewMarkdown } from '$lib/blog';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = ({ url }) => {
@@ -10,5 +10,5 @@ export const GET: RequestHandler = ({ url }) => {
 		return json({ message: 'post not found' }, { status: 404 });
 	}
 
-	return json({ markdown: post.markdown });
+	return json({ markdown: postPreviewMarkdown(post.markdown) });
 };

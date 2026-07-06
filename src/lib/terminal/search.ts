@@ -6,10 +6,11 @@ export function searchPosts(posts: BlogPostMeta[], query: string) {
 
 	if (!terms.length) return posts;
 
+	const tagTerms = terms.filter((term) => term.startsWith('#')).map((term) => term.slice(1));
+	const pathTerms = terms.filter((term) => term.startsWith('/')).map((term) => term.slice(1));
+	const textTerms = terms.filter((term) => !term.startsWith('#') && !term.startsWith('/'));
+
 	return posts.filter((post) => {
-		const tagTerms = terms.filter((term) => term.startsWith('#')).map((term) => term.slice(1));
-		const pathTerms = terms.filter((term) => term.startsWith('/')).map((term) => term.slice(1));
-		const textTerms = terms.filter((term) => !term.startsWith('#') && !term.startsWith('/'));
 		const haystack = [
 			post.title,
 			post.description,
@@ -37,12 +38,4 @@ export function sortPosts(posts: BlogPostMeta[], sort: BlogSort) {
 		if (sort === 'path-asc') return a.path.localeCompare(b.path);
 		return b.date.localeCompare(a.date);
 	});
-}
-
-export function postExcerpt(post: BlogPostMeta) {
-	return post.description;
-}
-
-export function matchingPreview(post: BlogPostMeta) {
-	return postExcerpt(post);
 }

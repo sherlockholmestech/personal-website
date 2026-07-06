@@ -17,6 +17,8 @@
 	let imageZoomLevel = $state(0);
 	let imageZoomScroll = $state<HTMLDivElement>();
 	let imageZoomTarget = $state<HTMLImageElement>();
+	let headingElements = $state<HTMLElement[]>([]);
+	let scrollFrame: number | undefined;
 	let toc = $derived<TocItem[]>([
 		{ id: 'post-top', level: 1, text: post.title },
 		...blocks
@@ -30,15 +32,12 @@
 	let activeHeading = $derived(toc[0]?.id ?? '');
 
 	function handleScroll() {
-		if (!contentViewport) return;
+		if (scrollFrame !== undefined) return;
 
-		const viewportTop = contentViewport.getBoundingClientRect().top;
-		const scrollOffset = headingScrollOffset();
-		const headings = Array.from(contentViewport.querySelectorAll<HTMLElement>('[data-heading-id]'));
-		const current = headings
-			.filter((heading) => heading.getBoundingClientRect().top - viewportTop <= scrollOffset + 1)
-			.at(-1);
-		activeHeading = current?.dataset.headingId ?? toc[0]?.id ?? '';
+		scrollFrame = requestAnimationFrame(() => {
+			scrollFrame = undefined;
+			updateActiveHeading();
+		});
 	}
 
 	function scrollToHeading(id: string) {
@@ -73,7 +72,24 @@
 	const imageZoomClasses = ['image-zoom-level-1', 'image-zoom-level-2'];
 
 	$effect(() => {
-		decorateMarkdownImages(blocks);
+		const viewport = contentViewport;
+		const currentBlocks = blocks;
+		if (!viewport) return;
+
+		void tick().then(() => {
+			if (contentViewport !== viewport || blocks !== currentBlocks) return;
+			headingElements = Array.from(viewport.querySelectorAll<HTMLElement>('[data-heading-id]'));
+			decorateMarkdownImages();
+			updateActiveHeading();
+		});
+	});
+
+	$effect(() => {
+		return () => {
+			if (scrollFrame !== undefined) {
+				cancelAnimationFrame(scrollFrame);
+			}
+		};
 	});
 
 	$effect(() => {
@@ -89,8 +105,23 @@
 		};
 	});
 
-	function decorateMarkdownImages(currentBlocks: MdBlock[]) {
-		if (!contentViewport || !currentBlocks.length) return;
+	function updateActiveHeading() {
+		if (!contentViewport) return;
+
+		const viewportTop = contentViewport.getBoundingClientRect().top;
+		const scrollOffset = headingScrollOffset();
+		const current = headingElements
+			.filter((heading) => heading.getBoundingClientRect().top - viewportTop <= scrollOffset + 1)
+			.at(-1);
+		const nextHeading = current?.dataset.headingId ?? toc[0]?.id ?? '';
+
+		if (nextHeading !== activeHeading) {
+			activeHeading = nextHeading;
+		}
+	}
+
+	function decorateMarkdownImages() {
+		if (!contentViewport || !blocks.length) return;
 
 		const images = contentViewport.querySelectorAll<HTMLImageElement>('.terminal-prose-body img');
 		for (const image of images) {

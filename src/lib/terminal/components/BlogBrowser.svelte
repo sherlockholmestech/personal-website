@@ -1,6 +1,7 @@
 <script lang="ts">
-	import type { BlogPostMeta, BlogSort, MdBlock } from '../types';
+	import { blogSortOptions, type BlogPostMeta, type BlogSort, type MdBlock } from '../types';
 	import { formatPostDate } from '../date';
+	import { isMobileViewport } from '../media';
 	import MarkdownBlocks from './MarkdownBlocks.svelte';
 
 	let {
@@ -35,15 +36,10 @@
 		onClose: () => void;
 	} = $props();
 
-	const sortOptions: { value: BlogSort; label: string }[] = [
-		{ value: 'date-desc', label: 'newest' },
-		{ value: 'date-asc', label: 'oldest' },
-		{ value: 'title-asc', label: 'title' },
-		{ value: 'path-asc', label: 'path' }
-	];
-
 	let sortOpen = $state(false);
-	let sortLabel = $derived(sortOptions.find((option) => option.value === sort)?.label ?? 'newest');
+	let sortLabel = $derived(
+		blogSortOptions.find((option) => option.value === sort)?.label ?? blogSortOptions[0].label
+	);
 
 	function toggleSortMenu() {
 		sortOpen = !sortOpen;
@@ -72,7 +68,7 @@
 
 	function handleResultClick(index: number) {
 		onSelect(index);
-		if (window.matchMedia('(max-width: 760px)').matches) {
+		if (isMobileViewport()) {
 			onOpen(index);
 		}
 	}
@@ -121,7 +117,7 @@
 				</button>
 				{#if sortOpen}
 					<div id="fzf-sort-menu" class="blog-browser-sort-menu" role="listbox">
-						{#each sortOptions as option (option.value)}
+						{#each blogSortOptions as option (option.value)}
 							<button
 								type="button"
 								class={`blog-browser-sort-option ${option.value === sort ? 'bg-[var(--yellow)] text-[var(--bg)]' : 'text-[var(--tx)]'}`}

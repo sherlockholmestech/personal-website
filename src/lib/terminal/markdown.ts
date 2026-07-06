@@ -40,17 +40,13 @@ export function parseMarkdown(
 			];
 		}
 		if (token.type === 'code') {
-			const code = token as Tokens.Code;
-			const text = normalizeCodeBlock(code.text);
-			const language = code.lang || 'text';
+			const code = codeBlockInfo(token as Tokens.Code);
 			return [
 				{
 					type: 'code',
-					language,
-					code: text,
-					html:
-						highlightedCode[codeKey(text, language)] ??
-						`<pre><code>${escapeHtml(text)}</code></pre>`
+					language: code.language,
+					code: code.text,
+					html: highlightedCode[code.key] ?? `<pre><code>${escapeHtml(code.text)}</code></pre>`
 				}
 			];
 		}
@@ -74,18 +70,17 @@ export async function highlightMarkdownCode(markdown: string, theme: Theme) {
 	const { codeToHtml } = await import('shiki');
 	const entries = await Promise.all(
 		codeBlocks.map(async (block) => {
-			const language = block.lang || 'text';
-			const text = normalizeCodeBlock(block.text);
-			const key = highlightCacheKey(text, language, theme);
+			const code = codeBlockInfo(block);
+			const key = highlightCacheKey(code.text, code.language, theme);
 			const cachedHtml = highlightedCodeCache.get(key);
 			const html =
 				cachedHtml ??
-				(await codeToHtml(text, {
-					lang: language,
+				(await codeToHtml(code.text, {
+					lang: code.language,
 					theme: theme === 'dark' ? 'vitesse-dark' : 'vitesse-light'
 				}));
 			highlightedCodeCache.set(key, html);
-			return [codeKey(text, language), html] as const;
+			return [code.key, html] as const;
 		})
 	);
 
@@ -94,6 +89,16 @@ export async function highlightMarkdownCode(markdown: string, theme: Theme) {
 
 export function codeKey(code: string, language: string) {
 	return `${language}:${code}`;
+}
+
+function codeBlockInfo(block: Tokens.Code) {
+	const language = block.lang || 'text';
+	const text = normalizeCodeBlock(block.text);
+	return {
+		language,
+		text,
+		key: codeKey(text, language)
+	};
 }
 
 function highlightCacheKey(code: string, language: string, theme: Theme) {

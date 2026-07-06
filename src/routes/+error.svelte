@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { SITE_TITLE } from '$lib/site';
 	import NotFoundPanel from '$lib/terminal/components/NotFoundPanel.svelte';
 </script>
 
 <svelte:head>
-	<title>{page.status === 404 ? '404' : page.status} | Sherlock Holmes</title>
+	<title>{page.status === 404 ? '404' : page.status} | {SITE_TITLE}</title>
 	<meta
 		name="description"
 		content="The requested path is not mapped to a page, post, or directory in this terminal."
@@ -15,7 +16,7 @@
 	<section class="terminal-shell">
 		<article class="terminal-window">
 			<div class="terminal-titlebar">
-				<span class="terminal-title">Sherlock Holmes // {page.status}</span>
+				<span class="terminal-title">{SITE_TITLE} // {page.status}</span>
 			</div>
 			<div class="terminal-viewport">
 				<div class="terminal-scrollback">

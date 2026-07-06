@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { onMount, tick } from 'svelte';
+	import { SITE_DESCRIPTION, SITE_TITLE, TERMINAL_TITLE } from '$lib/site';
 	import {
 		buildTree,
 		createFileSystem,
@@ -15,8 +16,16 @@
 		toHomeRelative
 	} from '$lib/terminal/filesystem';
 	import { highlightMarkdownCode, parseMarkdown } from '$lib/terminal/markdown';
+	import { isMobileViewport, shouldAvoidImplicitFocusViewport } from '$lib/terminal/media';
 	import { searchPosts, sortPosts } from '$lib/terminal/search';
-	import type { BlogPost, BlogPostMeta, BlogSort, ShellLine, Theme } from '$lib/terminal/types';
+	import {
+		DEFAULT_BLOG_SORT,
+		type BlogPost,
+		type BlogPostMeta,
+		type BlogSort,
+		type ShellLine,
+		type Theme
+	} from '$lib/terminal/types';
 	import BlogBrowser from '$lib/terminal/components/BlogBrowser.svelte';
 	import HelpPanel from '$lib/terminal/components/HelpPanel.svelte';
 	import NotFoundPanel from '$lib/terminal/components/NotFoundPanel.svelte';
@@ -28,10 +37,6 @@
 	import WelcomeBanner from '$lib/terminal/components/WelcomeBanner.svelte';
 
 	const ABOUT_PATH = 'about';
-	const SITE_TITLE = 'Sherlock Holmes';
-	const SITE_DESCRIPTION =
-		"Sherlock Holmes' terminal-style personal blog on CTFs, Rust, web development, and Model United Nations.";
-
 	let {
 		data
 	}: {
@@ -57,7 +62,7 @@
 	let blogBrowserVisible = $state(false);
 	let fzfQuery = $state('');
 	let fzfIndex = $state(0);
-	let blogSort = $state<BlogSort>('date-desc');
+	let blogSort = $state<BlogSort>(DEFAULT_BLOG_SORT);
 	let initializedRoutePath = $state<string>();
 	let theme = $state<Theme>('dark');
 	let terminalViewport = $state<HTMLDivElement>();
@@ -71,7 +76,7 @@
 	let previewHighlightedCodeByKey = $state<Record<string, Record<string, string>>>({});
 	let titlebarWidth = $state(0);
 	let titleMeasurementReady = $state(false);
-	let displayedTerminalTitle = $state('Sherlock Holmes // personal blog');
+	let displayedTerminalTitle = $state(TERMINAL_TITLE);
 	let titleMeasureContext: CanvasRenderingContext2D | undefined;
 	const mobileShortcuts = ['help', 'blog', 'projects', 'links', 'clear', 'home'];
 	const TITLE_TRUNCATION_SUFFIX = '[...]';
@@ -116,9 +121,7 @@
 			? parseMarkdown(browserPreviewMarkdown, browserPreviewHighlightedCode)
 			: []
 	);
-	let terminalTitleText = $derived(
-		currentView === 'post' ? selectedPost.title : 'Sherlock Holmes // personal blog'
-	);
+	let terminalTitleText = $derived(currentView === 'post' ? selectedPost.title : TERMINAL_TITLE);
 	let metaPost = $derived(loadedPost);
 	let metaTitle = $derived(metaPost ? `${metaPost.title} | ${SITE_TITLE}` : SITE_TITLE);
 	let metaDescription = $derived(metaPost?.description || SITE_DESCRIPTION);
@@ -226,7 +229,7 @@
 	}
 
 	function shouldAvoidImplicitFocus() {
-		return window.matchMedia('(max-width: 760px), (pointer: coarse)').matches;
+		return shouldAvoidImplicitFocusViewport();
 	}
 
 	function focusPromptIfComfortable() {
@@ -269,7 +272,7 @@
 	}
 
 	function getTerminalTitleMaxWidth(width: number) {
-		if (window.matchMedia('(max-width: 760px)').matches) {
+		if (isMobileViewport()) {
 			return Math.max(0, width - 42);
 		}
 
