@@ -2,30 +2,31 @@
 
 ## Project Structure & Module Organization
 
-This is a SvelteKit personal website with a terminal-style UI. Core application code lives in `src/lib`, with the main shell in `src/lib/TerminalWebsite.svelte` and reusable terminal components in `src/lib/terminal/components`. Blog content is stored as MDX in `src/content/blog`. Routes live in `src/routes`; shared styling is split across `src/routes/styles/*.css` and imported through `src/routes/layout.css`. Static assets, fonts, images, and icons live in `static`.
+This repository is a SvelteKit personal website with a terminal-style interface. Application code lives in `src/lib`; `TerminalWebsite.svelte` provides the main shell, while reusable terminal UI belongs in `src/lib/terminal/components` and shared terminal logic in `src/lib/terminal`. Routes and server loaders live under `src/routes`. Blog posts are MDX files in `src/content/blog`, and general page content is in `src/content`. Place public images, fonts, icons, and `robots.txt` in `static`.
 
 ## Build, Test, and Development Commands
 
-- `bun run dev`: start the local Vite/SvelteKit dev server.
-- `bun run check`: run `svelte-check` with the project TypeScript config.
-- `bun run lint`: check Prettier formatting and ESLint diagnostics.
-- `bun run format`: format the repository with Prettier.
+- `bun run dev`: start the Vite development server.
 - `bun run build`: create a production build.
+- `bun run preview`: serve the production build locally for final inspection.
+- `bun run check`: synchronize SvelteKit types and run `svelte-check` with `tsconfig.json`.
+- `bun run lint`: run Prettier checks and ESLint diagnostics.
+- `bun run format`: apply Prettier formatting across the repository.
 
-Run `bun run check && bun run lint` before handing off changes.
+Before handing off changes, run `bun run check && bun run lint`. Run `bun run build` when modifying routing, server loaders, or production configuration.
 
 ## Coding Style & Naming Conventions
 
-Use TypeScript and Svelte 5 conventions already present in the codebase. Prefer `$state`, `$derived`, and `$effect` patterns used in existing components. Keep component names in PascalCase, helpers/types in camelCase, and CSS classes lowercase with hyphenated names. Prefer small, focused components under `src/lib/terminal/components` and shared logic under `src/lib/terminal`.
+Write TypeScript and follow the Svelte 5 patterns already in use, including `$state`, `$derived`, and `$effect`. Let Prettier control indentation and formatting; do not hand-align code. Name Svelte components in PascalCase (`BlogBrowser.svelte`), functions and variables in camelCase, and CSS classes in lowercase kebab-case. Keep components focused, place shared behavior in `src/lib/terminal`, and avoid adding dependencies without prior approval.
 
 ## Testing Guidelines
 
-There is no dedicated unit test suite currently. Treat `bun run check` and `bun run lint` as the required validation gate. For UI changes, manually inspect desktop and mobile views, especially terminal commands, blog browsing, post reading, code blocks, and responsive layout.
+There is no dedicated unit-test framework or coverage requirement. Static checks are the required validation gate. For UI changes, manually inspect desktop and mobile layouts. Exercise terminal commands, route links, blog browsing, post rendering, code blocks, images, error states, and responsive behavior relevant to the change.
 
 ## Commit & Pull Request Guidelines
 
-Recent commits use short conventional prefixes such as `feat:` and `fix:`. Keep commit messages concise and focused on the user-visible change, for example `fix: align mobile code gutter`. Pull requests should include a short summary, validation commands run, and screenshots or screen recordings for visual changes.
+Recent history uses short conventional prefixes such as `feat:` and `fix:`. Write concise, user-visible subjects, for example `fix: align mobile code gutter`. Keep each commit focused. Pull requests should summarize the change, list validation commands, link relevant issues when applicable, and include screenshots or recordings for visual updates.
 
-## Agent-Specific Instructions
+## Content and Asset Safety
 
-Do not delete or overwrite user content in `src/content/blog` or `static` unless explicitly requested. Match existing styling and terminal aesthetics before introducing new UI patterns. Avoid adding new dependencies unless the project already uses the library or the user approves it.
+Do not delete or overwrite files in `src/content/blog` or `static` unless the task explicitly requires it. Preserve the established terminal aesthetic and reuse existing components and styles before introducing new patterns.

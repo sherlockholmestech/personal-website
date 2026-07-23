@@ -95,7 +95,7 @@
 	}
 
 	.terminal-shell {
-		@apply grid min-h-0 flex-1 grid-cols-1 bg-[var(--bg)] p-[14px] max-[760px]:px-[max(10px,env(safe-area-inset-left))] max-[760px]:pt-[max(26px,calc(env(safe-area-inset-top)_+_12px))] max-[760px]:pr-[max(10px,env(safe-area-inset-right))] max-[760px]:pb-[max(10px,env(safe-area-inset-bottom))];
+		@apply grid min-h-0 flex-1 grid-cols-1 bg-[var(--bg)] p-[14px] max-[760px]:px-[max(10px,env(safe-area-inset-left))] max-[760px]:pt-[max(26px,calc(env(safe-area-inset-top)_+_12px))] max-[760px]:pr-[max(10px,env(safe-area-inset-right))] max-[760px]:pb-0;
 	}
 
 	.terminal-window {
@@ -141,10 +141,15 @@
 	}
 
 	.terminal-shortcuts {
-		@apply hidden max-[760px]:z-[4] max-[760px]:mb-[8px] max-[760px]:flex max-[760px]:flex-wrap max-[760px]:gap-[6px] max-[760px]:py-[7px] max-[760px]:pb-[4px];
+		@apply hidden max-[760px]:z-[4] max-[760px]:mb-[8px] max-[760px]:flex max-[760px]:flex-nowrap max-[760px]:gap-[6px] max-[760px]:overflow-x-auto max-[760px]:py-[7px] max-[760px]:pb-[4px];
 	}
 
 	@media (max-width: 760px) {
+		.terminal-workspace {
+			height: var(--terminal-mobile-viewport-height, 100dvh);
+			min-height: var(--terminal-mobile-viewport-height, 100dvh);
+		}
+
 		.terminal-viewport {
 			@apply overflow-hidden px-0 pt-0 pb-0;
 		}
@@ -157,11 +162,52 @@
 
 		.terminal-shortcuts {
 			background-color: color-mix(in srgb, var(--bg) 92%, transparent);
+			overscroll-behavior-inline: contain;
+			scrollbar-width: none;
+		}
+
+		.terminal-shortcuts::-webkit-scrollbar {
+			display: none;
+		}
+
+		.terminal-keyboard-open .terminal-shell {
+			padding-top: max(14px, env(safe-area-inset-top));
+			padding-right: env(safe-area-inset-right);
+			padding-left: env(safe-area-inset-left);
+		}
+
+		.terminal-keyboard-open .terminal-command-dock {
+			padding-top: 4px;
+			padding-bottom: 4px;
+		}
+
+		.terminal-keyboard-open .terminal-shortcuts {
+			margin-bottom: 3px;
+			padding-top: 3px;
+			padding-bottom: 3px;
 		}
 	}
 
 	.terminal-shortcut-button {
-		@apply min-h-[32px] cursor-pointer border border-[var(--border)] bg-[var(--bg)] px-[8px] py-[3px] text-[var(--yellow)] max-[760px]:min-h-[40px] max-[760px]:px-[11px];
+		@apply min-h-[32px] flex-none cursor-pointer touch-manipulation border border-[var(--border)] bg-[var(--bg)] px-[8px] py-[3px] text-[var(--yellow)] max-[760px]:min-h-[40px] max-[760px]:px-[11px];
+	}
+
+	.terminal-keyboard-dismiss {
+		@apply hidden h-[36px] flex-none cursor-pointer touch-manipulation items-center border border-[var(--border)] bg-[var(--bg)] px-[9px] text-[13px] text-[var(--tx-2)];
+	}
+
+	.terminal-autocomplete-button {
+		@apply hidden h-[36px] flex-none cursor-pointer touch-manipulation items-center border border-[var(--border)] bg-[var(--bg)] px-[9px] text-[13px] text-[var(--yellow)];
+	}
+
+	@media (max-width: 760px) {
+		.terminal-autocomplete-button {
+			@apply inline-flex;
+		}
+
+		.terminal-keyboard-open .terminal-keyboard-dismiss {
+			@apply inline-flex;
+		}
 	}
 
 	.terminal-prose {
@@ -405,6 +451,17 @@
 
 	.blog-browser-input {
 		@apply min-w-0 border-0 bg-transparent text-[var(--tx)] caret-[var(--yellow)] outline-none max-[760px]:min-h-[44px] max-[760px]:text-[16px];
+	}
+
+	@media (max-width: 760px) {
+		.blog-browser-field-query,
+		.blog-browser-field-sort {
+			grid-template-columns: minmax(0, 1fr);
+		}
+
+		.blog-browser-input {
+			@apply w-full border border-[var(--border)] px-[8px] shadow-[inset_0_-1px_0_var(--ui-2)] placeholder:text-[var(--tx-2)] focus:border-[var(--yellow)] focus:ring-1 focus:ring-[var(--yellow)];
+		}
 	}
 
 	.blog-browser-sort-button {

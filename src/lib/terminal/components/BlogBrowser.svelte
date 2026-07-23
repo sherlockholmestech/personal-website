@@ -153,7 +153,12 @@
 				bind:this={inputRef}
 				bind:value={query}
 				aria-label="search blog posts"
+				placeholder="type to filter posts"
 				autocomplete="off"
+				autocapitalize="none"
+				autocorrect="off"
+				enterkeyhint="search"
+				spellcheck={false}
 				oninput={onQueryInput}
 				onkeydown={onKeydown}
 				class="blog-browser-input"

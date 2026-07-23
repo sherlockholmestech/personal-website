@@ -3,6 +3,7 @@
 	import { resolve } from '$app/paths';
 	import { onMount, tick } from 'svelte';
 	import { SITE_DESCRIPTION, SITE_TITLE, TERMINAL_TITLE } from '$lib/site';
+	import { completeTerminalInput } from '$lib/terminal/autocomplete';
 	import {
 		buildTree,
 		createFileSystem,
@@ -75,8 +76,10 @@
 	let titlebarWidth = $state(0);
 	let titleMeasurementReady = $state(false);
 	let displayedTerminalTitle = $state(TERMINAL_TITLE);
+	let mobileViewportHeight = $state<number>();
+	let mobileKeyboardOpen = $state(false);
 	let titleMeasureContext: CanvasRenderingContext2D | undefined;
-	const mobileShortcuts = ['help', 'blog', 'projects', 'links', 'clear', 'home'];
+	const mobileShortcuts = ['home', 'blog', 'about', 'projects', 'links', 'help', 'clear'];
 	const TITLE_TRUNCATION_SUFFIX = '[...]';
 
 	let fileSystem = $derived(createFileSystem(posts));
@@ -130,11 +133,17 @@
 		}
 	});
 
-	onMount(async () => {
-		await tick();
-		focusPromptIfComfortable();
-		await document.fonts?.ready;
-		titleMeasurementReady = true;
+	onMount(() => {
+		const stopWatchingMobileViewport = watchMobileViewport();
+
+		void (async () => {
+			await tick();
+			focusPromptIfComfortable();
+			await document.fonts?.ready;
+			titleMeasurementReady = true;
+		})();
+
+		return stopWatchingMobileViewport;
 	});
 
 	$effect(() => {
@@ -236,10 +245,71 @@
 		}
 	}
 
+	function watchMobileViewport() {
+		const viewport = window.visualViewport;
+		let frame = 0;
+		let unfocusedViewportHeight = viewport?.height ?? window.innerHeight;
+
+		const updateViewport = () => {
+			cancelAnimationFrame(frame);
+			frame = requestAnimationFrame(() => {
+				const mobile = isMobileViewport();
+				const nextHeight = viewport?.height ?? window.innerHeight;
+				const focusedElement = document.activeElement;
+				const textFieldFocused =
+					focusedElement instanceof HTMLInputElement ||
+					focusedElement instanceof HTMLTextAreaElement ||
+					(focusedElement instanceof HTMLElement && focusedElement.isContentEditable);
+
+				if (!textFieldFocused) {
+					unfocusedViewportHeight = nextHeight;
+				}
+
+				mobileViewportHeight = mobile ? Math.round(nextHeight) : undefined;
+				mobileKeyboardOpen =
+					mobile && textFieldFocused && unfocusedViewportHeight - nextHeight > 100;
+
+				if (mobileKeyboardOpen && focusedElement === promptInput) {
+					void scrollToPrompt();
+				}
+			});
+		};
+
+		const handleFocusChange = () => {
+			requestAnimationFrame(updateViewport);
+		};
+
+		viewport?.addEventListener('resize', updateViewport);
+		viewport?.addEventListener('scroll', updateViewport);
+		window.addEventListener('resize', updateViewport);
+		document.addEventListener('focusin', handleFocusChange);
+		document.addEventListener('focusout', handleFocusChange);
+		updateViewport();
+
+		return () => {
+			cancelAnimationFrame(frame);
+			viewport?.removeEventListener('resize', updateViewport);
+			viewport?.removeEventListener('scroll', updateViewport);
+			window.removeEventListener('resize', updateViewport);
+			document.removeEventListener('focusin', handleFocusChange);
+			document.removeEventListener('focusout', handleFocusChange);
+		};
+	}
+
 	function focusBlogSearchIfComfortable() {
 		if (!shouldAvoidImplicitFocus()) {
 			fzfInput?.focus();
 		}
+	}
+
+	function preservePromptFocus(event: PointerEvent) {
+		if (document.activeElement === promptInput && event.pointerType !== 'mouse') {
+			event.preventDefault();
+		}
+	}
+
+	function dismissMobileKeyboard() {
+		promptInput?.blur();
 	}
 
 	function truncateTerminalTitle(title: string, width: number) {
@@ -295,6 +365,11 @@
 	}
 
 	function handlePromptKeydown(event: KeyboardEvent) {
+		if (event.key === 'Tab') {
+			event.preventDefault();
+			void autocompletePrompt();
+			return;
+		}
 		if (blogBrowserVisible && event.key === 'ArrowUp') {
 			event.preventDefault();
 			fzfInput?.focus();
@@ -302,6 +377,21 @@
 		if (blogBrowserVisible && event.key === 'Escape') {
 			event.preventDefault();
 			blogBrowserVisible = false;
+		}
+	}
+
+	async function autocompletePrompt() {
+		const cursor = promptInput?.selectionStart ?? input.length;
+		const completion = completeTerminalInput(input, cursor, cwd, fileSystem);
+		if (!completion) return;
+
+		input = completion.input;
+		await tick();
+		promptInput?.setSelectionRange(completion.cursor, completion.cursor);
+
+		if (completion.candidates.length) {
+			print([completion.candidates.join('  ')], 'muted');
+			await scrollToPrompt();
 		}
 	}
 
@@ -653,7 +743,13 @@
 	<meta name="twitter:description" content={metaDescription} />
 </svelte:head>
 
-<main class="workspace terminal-workspace">
+<main
+	class="workspace terminal-workspace"
+	class:terminal-keyboard-open={mobileKeyboardOpen}
+	style={mobileViewportHeight
+		? `--terminal-mobile-viewport-height: ${mobileViewportHeight}px`
+		: undefined}
+>
 	<section class="terminal-shell">
 		<article class="terminal-window">
 			<div class="terminal-titlebar" bind:this={terminalTitlebar}>
@@ -754,6 +850,7 @@
 									<button
 										type="button"
 										class="terminal-shortcut-button"
+										onpointerdown={preservePromptFocus}
 										onclick={() => runShortcut(command)}
 									>
 										{command}
@@ -767,6 +864,8 @@
 								bind:inputRef={promptInput}
 								onKeydown={handlePromptKeydown}
 								onSubmit={submit}
+								onAutocomplete={autocompletePrompt}
+								onDismissKeyboard={dismissMobileKeyboard}
 							/>
 						</div>
 					{/if}
