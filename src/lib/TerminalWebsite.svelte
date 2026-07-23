@@ -248,13 +248,16 @@
 	function watchMobileViewport() {
 		const viewport = window.visualViewport;
 		let frame = 0;
+		let settleTimer = 0;
 		let unfocusedViewportHeight = viewport?.height ?? window.innerHeight;
 
 		const updateViewport = () => {
 			cancelAnimationFrame(frame);
 			frame = requestAnimationFrame(() => {
 				const mobile = isMobileViewport();
-				const nextHeight = viewport?.height ?? window.innerHeight;
+				const viewportHeight = viewport?.height ?? window.innerHeight;
+				const viewportOffsetTop = Math.max(0, viewport?.offsetTop ?? 0);
+				const viewportBottom = viewportOffsetTop + viewportHeight;
 				const focusedElement = document.activeElement;
 				const textFieldFocused =
 					focusedElement instanceof HTMLInputElement ||
@@ -262,21 +265,25 @@
 					(focusedElement instanceof HTMLElement && focusedElement.isContentEditable);
 
 				if (!textFieldFocused) {
-					unfocusedViewportHeight = nextHeight;
+					unfocusedViewportHeight = viewportHeight;
 				}
 
-				mobileViewportHeight = mobile ? Math.round(nextHeight) : undefined;
-				mobileKeyboardOpen =
-					mobile && textFieldFocused && unfocusedViewportHeight - nextHeight > 100;
+				const keyboardOpen =
+					mobile && textFieldFocused && unfocusedViewportHeight - viewportHeight > 100;
 
-				if (mobileKeyboardOpen && focusedElement === promptInput) {
+				mobileKeyboardOpen = keyboardOpen;
+				mobileViewportHeight = keyboardOpen ? Math.round(viewportBottom) : undefined;
+
+				if (keyboardOpen && focusedElement === promptInput) {
 					void scrollToPrompt();
 				}
 			});
 		};
 
 		const handleFocusChange = () => {
-			requestAnimationFrame(updateViewport);
+			updateViewport();
+			window.clearTimeout(settleTimer);
+			settleTimer = window.setTimeout(updateViewport, 300);
 		};
 
 		viewport?.addEventListener('resize', updateViewport);
@@ -288,6 +295,7 @@
 
 		return () => {
 			cancelAnimationFrame(frame);
+			window.clearTimeout(settleTimer);
 			viewport?.removeEventListener('resize', updateViewport);
 			viewport?.removeEventListener('scroll', updateViewport);
 			window.removeEventListener('resize', updateViewport);

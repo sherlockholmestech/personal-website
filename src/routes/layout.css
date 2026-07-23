@@ -146,6 +146,11 @@
 
 	@media (max-width: 760px) {
 		.terminal-workspace {
+			height: 100dvh;
+			min-height: 100dvh;
+		}
+
+		.terminal-workspace.terminal-keyboard-open {
 			height: var(--terminal-mobile-viewport-height, 100dvh);
 			min-height: var(--terminal-mobile-viewport-height, 100dvh);
 		}
@@ -172,8 +177,8 @@
 
 		.terminal-keyboard-open .terminal-shell {
 			padding-top: max(14px, env(safe-area-inset-top));
-			padding-right: env(safe-area-inset-right);
-			padding-left: env(safe-area-inset-left);
+			padding-right: max(10px, env(safe-area-inset-right));
+			padding-left: max(10px, env(safe-area-inset-left));
 		}
 
 		.terminal-keyboard-open .terminal-command-dock {
