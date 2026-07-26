@@ -26,6 +26,10 @@ export function parseMarkdown(
 			];
 		}
 		if (token.type === 'paragraph') {
+			const dist = distBlock(token.text);
+			if (dist) {
+				return [dist];
+			}
 			return [{ type: 'paragraph', html: inlineHtml(token.text) }];
 		}
 		if (token.type === 'list') {
@@ -141,6 +145,31 @@ function escapeHtml(value: string) {
 		.replaceAll('>', '&gt;')
 		.replaceAll('"', '&quot;')
 		.replaceAll("'", '&#39;');
+}
+
+function distBlock(value: string): MdBlock | undefined {
+	const match = value.trim().match(/^::dist\[([^\]\n]+)\]\{file=(?:"([^"\n]+)"|'([^'\n]+)')\}$/);
+	if (!match) return;
+
+	const label = match[1].trim();
+	const file = (match[2] ?? match[3]).trim();
+	const segments = file.split('/');
+
+	if (
+		!label ||
+		file.startsWith('/') ||
+		file.includes('\\') ||
+		segments.some((segment) => !segment || segment === '.' || segment === '..')
+	) {
+		return;
+	}
+
+	return {
+		type: 'dist',
+		label,
+		file,
+		href: `/dist/${segments.map(encodeURIComponent).join('/')}`
+	};
 }
 
 function decorateImages(html: string) {

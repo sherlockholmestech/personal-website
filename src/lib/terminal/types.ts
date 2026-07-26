@@ -34,5 +34,6 @@ export type MdBlock =
 	| { type: 'paragraph'; html: string }
 	| { type: 'list'; items: string[]; ordered: boolean }
 	| { type: 'code'; language: string; code: string; html: string }
+	| { type: 'dist'; label: string; file: string; href: string }
 	| { type: 'quote'; html: string }
 	| { type: 'hr' };
