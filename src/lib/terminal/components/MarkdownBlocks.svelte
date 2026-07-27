@@ -37,7 +37,7 @@
 		<a
 			href={resolve(block.href as `/dist/${string}`)}
 			download
-			class="not-prose my-[16px] inline-flex min-h-[42px] max-w-full flex-wrap items-center gap-x-[10px] gap-y-[4px] border border-[var(--green)] bg-[var(--bg-2)] px-[14px] py-[8px] font-bold text-[var(--green)] no-underline hover:bg-[var(--green)] hover:text-[var(--bg)] focus-visible:bg-[var(--green)] focus-visible:text-[var(--bg)] focus-visible:outline-none"
+			class="not-prose my-[16px] flex min-h-[42px] w-full flex-wrap items-center gap-x-[10px] gap-y-[4px] border border-[var(--green)] bg-[var(--bg-2)] px-[14px] py-[8px] font-bold text-[var(--green)] no-underline hover:bg-[var(--green)] hover:text-[var(--bg)] focus-visible:bg-[var(--green)] focus-visible:text-[var(--bg)] focus-visible:outline-none"
 			aria-label={`${block.label}: ${block.file}`}
 		>
 			<span aria-hidden="true">&gt;</span>
