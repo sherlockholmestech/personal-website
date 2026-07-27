@@ -76,13 +76,17 @@ export async function highlightMarkdownCode(markdown: string) {
 		codeBlocks.map(async (block) => {
 			const code = codeBlockInfo(block);
 			const key = highlightCacheKey(code.text, code.language);
-			const cachedHtml = highlightedCodeCache.get(key);
-			const html =
-				cachedHtml ??
-				(await codeToHtml(code.text, {
-					lang: code.language,
-					theme: 'vitesse-dark'
-				}));
+			let html = highlightedCodeCache.get(key);
+			if (!html) {
+				try {
+					html = await codeToHtml(code.text, {
+						lang: code.language === 'nasm' ? 'asm' : code.language,
+						theme: 'vitesse-dark'
+					});
+				} catch {
+					html = `<pre><code>${escapeHtml(code.text)}</code></pre>`;
+				}
+			}
 			highlightedCodeCache.set(key, html);
 			return [code.key, html] as const;
 		})
