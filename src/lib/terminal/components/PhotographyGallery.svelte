@@ -474,9 +474,11 @@
 				<p>{selectedPhoto.description ?? selectedPhoto.alt}</p>
 				{#if selectedPhoto.location || selectedPhoto.date || selectedPhoto.camera}
 					<div>
-						{#each [selectedPhoto.location, selectedPhoto.date, selectedPhoto.camera].filter(Boolean) as item}
-							<span>{item}</span>
-						{/each}
+						<span>
+							{[selectedPhoto.location, selectedPhoto.date, selectedPhoto.camera]
+								.filter(Boolean)
+								.join('; ')}
+						</span>
 					</div>
 				{/if}
 			</div>
