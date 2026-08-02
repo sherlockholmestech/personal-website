@@ -2,6 +2,13 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { onMount, tick } from 'svelte';
+	import {
+		photographRoutePath,
+		photographRouteSlug,
+		type Photograph,
+		type PhotographyCollection,
+		type PhotographyRouteState
+	} from '$lib/photography';
 	import { SITE_DESCRIPTION, SITE_TITLE, TERMINAL_TITLE } from '$lib/site';
 	import { completeTerminalInput } from '$lib/terminal/autocomplete';
 	import {
@@ -16,6 +23,7 @@
 		ROOT_DIRECTORY,
 		toHomeRelative
 	} from '$lib/terminal/filesystem';
+	import { helpfulCommands } from '$lib/terminal/help';
 	import { highlightMarkdownCode, parseMarkdown } from '$lib/terminal/markdown';
 	import { isMobileViewport, shouldAvoidImplicitFocusViewport } from '$lib/terminal/media';
 	import { searchPosts, sortPosts } from '$lib/terminal/search';
@@ -29,6 +37,7 @@
 	import BlogBrowser from '$lib/terminal/components/BlogBrowser.svelte';
 	import HelpPanel from '$lib/terminal/components/HelpPanel.svelte';
 	import NotFoundPanel from '$lib/terminal/components/NotFoundPanel.svelte';
+	import PhotographyGallery from '$lib/terminal/components/PhotographyGallery.svelte';
 	import PostReader from '$lib/terminal/components/PostReader.svelte';
 	import ProjectsTable from '$lib/terminal/components/ProjectsTable.svelte';
 	import PromptForm from '$lib/terminal/components/PromptForm.svelte';
@@ -44,6 +53,7 @@
 			posts: BlogPostMeta[];
 			about: BlogPost;
 			post?: BlogPost;
+			photography?: PhotographyRouteState;
 			requestedPath?: string;
 			notFound?: boolean;
 		};
@@ -51,6 +61,7 @@
 	let posts = $derived(data.posts);
 	let aboutPost = $derived(data.about);
 	let loadedPost = $derived(data.post);
+	let routePhotography = $derived(data.photography);
 	let requestedPath = $derived(data.requestedPath);
 	let routeNotFound = $derived(data.notFound);
 
@@ -60,6 +71,10 @@
 	let selectedPath = $state('');
 	let currentView = $state<'terminal' | 'post'>('terminal');
 	let blogBrowserVisible = $state(false);
+	let photographyBrowserVisible = $state(false);
+	let photographyQuery = $state('');
+	let photographyCollectionSlug = $state('');
+	let photographyPhotoSlug = $state('');
 	let fzfQuery = $state('');
 	let fzfIndex = $state(0);
 	let blogSort = $state<BlogSort>(DEFAULT_BLOG_SORT);
@@ -70,6 +85,7 @@
 	let terminalTitleMeasurer = $state<HTMLSpanElement>();
 	let promptInput = $state<HTMLInputElement>();
 	let fzfInput = $state<HTMLInputElement>();
+	let photographyInput = $state<HTMLInputElement>();
 	let highlightedCode = $state<Record<string, string>>({});
 	let previewMarkdownByPath = $state<Record<string, string>>({});
 	let previewHighlightedCodeByKey = $state<Record<string, Record<string, string>>>({});
@@ -79,7 +95,7 @@
 	let mobileViewportHeight = $state<number>();
 	let mobileKeyboardOpen = $state(false);
 	let titleMeasureContext: CanvasRenderingContext2D | undefined;
-	const mobileShortcuts = ['home', 'blog', 'about', 'projects', 'links', 'help', 'clear'];
+	const mobileShortcuts = ['home', ...helpfulCommands.filter((command) => command !== 'home')];
 	const TITLE_TRUNCATION_SUFFIX = '[...]';
 
 	let fileSystem = $derived(createFileSystem(posts));
@@ -208,6 +224,13 @@
 		if (requestedPath && initializedRoutePath !== requestedPath) {
 			if (routeNotFound) {
 				history = [{ kind: 'not-found', path: requestedPath }];
+			} else if (routePhotography) {
+				photographyQuery = routePhotography.collectionSlug ?? '';
+				photographyCollectionSlug = routePhotography.collectionSlug ?? '';
+				photographyPhotoSlug = routePhotography.photoSlug ?? '';
+				blogBrowserVisible = false;
+				photographyBrowserVisible = true;
+				currentView = 'terminal';
 			} else {
 				if (loadedPost?.path === requestedPath || aboutPost.path === requestedPath) {
 					selectedPath = requestedPath;
@@ -382,9 +405,17 @@
 			event.preventDefault();
 			fzfInput?.focus();
 		}
+		if (photographyBrowserVisible && event.key === 'ArrowUp') {
+			event.preventDefault();
+			photographyInput?.focus();
+		}
 		if (blogBrowserVisible && event.key === 'Escape') {
 			event.preventDefault();
 			blogBrowserVisible = false;
+		}
+		if (photographyBrowserVisible && event.key === 'Escape') {
+			event.preventDefault();
+			closePhotographyBrowser();
 		}
 	}
 
@@ -421,6 +452,7 @@
 		if (name === 'clear') {
 			history = [];
 			blogBrowserVisible = false;
+			photographyBrowserVisible = false;
 			if (currentView === 'post') closePostView();
 			return;
 		}
@@ -428,6 +460,7 @@
 		if (name === 'home') {
 			history = [{ kind: 'banner' }];
 			blogBrowserVisible = false;
+			photographyBrowserVisible = false;
 			if (currentView === 'post') closePostView();
 			return;
 		}
@@ -474,6 +507,14 @@
 
 		if (name === 'projects') {
 			history = [...history, { kind: 'projects' }];
+			return;
+		}
+
+		if (name === 'photography') {
+			photographyQuery = target;
+			photographyCollectionSlug = '';
+			photographyPhotoSlug = '';
+			void openPhotographyBrowser();
 			return;
 		}
 
@@ -574,6 +615,11 @@
 			return;
 		}
 
+		if (entry.kind === 'photograph') {
+			void openPhotographyPhotograph(entry.collection, entry.photograph);
+			return;
+		}
+
 		selectedPath = entry.post.path;
 		blogBrowserVisible = false;
 		currentView = 'post';
@@ -588,6 +634,7 @@
 	}
 
 	async function openBlogSearch() {
+		photographyBrowserVisible = false;
 		blogBrowserVisible = true;
 		fzfIndex = Math.max(
 			0,
@@ -617,6 +664,72 @@
 	function closeBlogSearch() {
 		blogBrowserVisible = false;
 		focusPromptIfComfortable();
+	}
+
+	async function openPhotographyBrowser() {
+		blogBrowserVisible = false;
+		photographyBrowserVisible = true;
+		await tick();
+		if (!shouldAvoidImplicitFocus()) {
+			photographyInput?.focus();
+		}
+	}
+
+	function closePhotographyBrowser() {
+		photographyBrowserVisible = false;
+		photographyCollectionSlug = '';
+		photographyPhotoSlug = '';
+		if (requestedPath?.startsWith('photography')) {
+			void updateUrlForView();
+		}
+		focusPromptIfComfortable();
+	}
+
+	function closeActiveTerminalPanel() {
+		if (blogBrowserVisible) {
+			closeBlogSearch();
+			return;
+		}
+		if (photographyCollectionSlug) {
+			void closePhotographyCollection();
+			return;
+		}
+		if (photographyBrowserVisible) {
+			closePhotographyBrowser();
+		}
+	}
+
+	async function openPhotographyCollection(collection: PhotographyCollection) {
+		photographyQuery = collection.slug;
+		photographyCollectionSlug = collection.slug;
+		photographyPhotoSlug = '';
+		photographyBrowserVisible = true;
+		await updatePhotographyUrl(`photography/${collection.slug}`);
+	}
+
+	async function closePhotographyCollection() {
+		photographyCollectionSlug = '';
+		photographyPhotoSlug = '';
+		photographyQuery = '';
+		await updatePhotographyUrl('photography');
+	}
+
+	async function openPhotographyPhotograph(
+		collection: PhotographyCollection,
+		photograph: Photograph
+	) {
+		photographyQuery = collection.slug;
+		photographyCollectionSlug = collection.slug;
+		photographyPhotoSlug = photographRouteSlug(photograph);
+		blogBrowserVisible = false;
+		photographyBrowserVisible = true;
+		await tick();
+		await updatePhotographyUrl(photographRoutePath(collection, photograph));
+	}
+
+	async function closePhotographyPhotograph(collection: PhotographyCollection) {
+		photographyPhotoSlug = '';
+		await updatePhotographyUrl(`photography/${collection.slug}`);
 	}
 
 	function closePostView() {
@@ -685,8 +798,14 @@
 		const directoryPath = normalizePath(path, HOME_DIRECTORY);
 		const entries = listEntries(fileSystem, directoryPath);
 		return entries.map((entry) => {
+			const resolvedEntry =
+				entry.type === 'file' ? resolveEntry(fileSystem, entry.path) : undefined;
 			const relativePath =
-				entry.type === 'file' ? postPathFromFilePath(entry.path) : toHomeRelative(entry.path);
+				resolvedEntry?.type === 'file' && resolvedEntry.kind === 'photograph'
+					? photographRoutePath(resolvedEntry.collection, resolvedEntry.photograph)
+					: entry.type === 'file'
+						? postPathFromFilePath(entry.path)
+						: toHomeRelative(entry.path);
 			return {
 				name: entry.type === 'file' ? entry.name.replace(/\.md$/, '') : entry.name,
 				path: entry.path,
@@ -735,6 +854,14 @@
 		});
 	}
 
+	async function updatePhotographyUrl(path: string) {
+		await goto(resolve(`/${path}` as `/photography${string}`), {
+			keepFocus: true,
+			noScroll: true,
+			replaceState: false
+		});
+	}
+
 	async function runShortcut(command: string) {
 		input = command;
 		await submit();
@@ -775,6 +902,15 @@
 						class="terminal-close-button"
 						aria-label="close blog reader"
 						onclick={closePostView}
+					>
+						X
+					</button>
+				{:else if photographyBrowserVisible && photographyCollectionSlug}
+					<button
+						type="button"
+						class="terminal-close-button terminal-panel-close-button"
+						aria-label="close active terminal panel"
+						onclick={closeActiveTerminalPanel}
 					>
 						X
 					</button>
@@ -851,7 +987,21 @@
 						/>
 					{/if}
 
-					{#if !blogBrowserVisible}
+					{#if photographyBrowserVisible}
+						<PhotographyGallery
+							initialQuery={photographyQuery}
+							initialCollectionSlug={photographyCollectionSlug}
+							initialPhotoSlug={photographyPhotoSlug}
+							bind:inputRef={photographyInput}
+							onClose={closePhotographyBrowser}
+							onCollectionOpen={openPhotographyCollection}
+							onCollectionClose={closePhotographyCollection}
+							onPhotoOpen={openPhotographyPhotograph}
+							onPhotoClose={closePhotographyPhotograph}
+						/>
+					{/if}
+
+					{#if !blogBrowserVisible && !photographyBrowserVisible}
 						<div class="terminal-command-dock">
 							<div class="terminal-shortcuts" aria-label="quick commands">
 								{#each mobileShortcuts as command (command)}

@@ -1,4 +1,5 @@
 import { marked, type Tokens } from 'marked';
+import { slugify } from './text';
 import type { MdBlock } from './types';
 
 marked.use({
@@ -122,14 +123,6 @@ function headingId(text: string, used: Map<string, number>) {
 	const count = used.get(base) ?? 0;
 	used.set(base, count + 1);
 	return count ? `${base}-${count + 1}` : base;
-}
-
-function slugify(text: string) {
-	return text
-		.toLowerCase()
-		.replace(/<[^>]*>/g, '')
-		.replace(/[^a-z0-9]+/g, '-')
-		.replace(/^-+|-+$/g, '');
 }
 
 function normalizeCodeBlock(value: string) {

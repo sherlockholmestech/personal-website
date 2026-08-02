@@ -1,4 +1,5 @@
 import matter from 'gray-matter';
+import type { PhotographyRouteState } from '$lib/photography';
 import type { BlogPost, BlogPostMeta } from '$lib/terminal/types';
 import aboutRaw from '../content/about.md?raw';
 
@@ -38,7 +39,12 @@ export function loadAboutPost() {
 }
 
 export function loadTerminalPageData(
-	options: { requestedPath?: string; post?: BlogPost; notFound?: boolean } = {}
+	options: {
+		requestedPath?: string;
+		post?: BlogPost;
+		photography?: PhotographyRouteState;
+		notFound?: boolean;
+	} = {}
 ) {
 	return {
 		...loadPostMetas(),

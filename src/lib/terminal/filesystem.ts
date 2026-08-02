@@ -1,12 +1,22 @@
+import {
+	photographyCollections,
+	type Photograph,
+	type PhotographyCollection
+} from '../../content/photography';
+import { photographFileName } from '../photography';
 import type { BlogPostMeta } from './types';
 
 export const ROOT_DIRECTORY = '/';
 export const HOME_DIRECTORY = '/home/sherlock';
 
 export type FileSystem = {
-	files: Map<string, BlogPostMeta>;
+	files: Map<string, VirtualFile>;
 	directories: Set<string>;
 };
+
+export type VirtualFile =
+	| { kind: 'post'; post: BlogPostMeta }
+	| { kind: 'photograph'; collection: PhotographyCollection; photograph: Photograph };
 
 export type FsEntry = {
 	name: string;
@@ -15,13 +25,23 @@ export type FsEntry = {
 };
 
 export function createFileSystem(posts: BlogPostMeta[]): FileSystem {
-	const files = new Map<string, BlogPostMeta>();
+	const files = new Map<string, VirtualFile>();
 	const directories = new Set<string>([ROOT_DIRECTORY, '/home', HOME_DIRECTORY]);
 
 	for (const post of posts) {
 		const filePath = filePathFromPostPath(post.path);
-		files.set(filePath, post);
+		files.set(filePath, { kind: 'post', post });
 		ensureDirectoriesForFile(filePath, directories);
+	}
+
+	directories.add(`${HOME_DIRECTORY}/photography`);
+	for (const collection of photographyCollections) {
+		directories.add(`${HOME_DIRECTORY}/photography/${collection.slug}`);
+		for (const photograph of collection.photographs) {
+			const filePath = `${HOME_DIRECTORY}/photography/${collection.slug}/${photographFileName(photograph)}`;
+			files.set(filePath, { kind: 'photograph', collection, photograph });
+			ensureDirectoriesForFile(filePath, directories);
+		}
 	}
 
 	return { files, directories };
@@ -69,12 +89,12 @@ export function resolveEntry(fileSystem: FileSystem, path: string) {
 
 export function resolveFile(fileSystem: FileSystem, path: string) {
 	if (fileSystem.files.has(path)) {
-		return { filePath: path, post: fileSystem.files.get(path)! };
+		return { filePath: path, ...fileSystem.files.get(path)! };
 	}
 	if (!path.endsWith('.md')) {
 		const candidate = `${path}.md`;
 		if (fileSystem.files.has(candidate)) {
-			return { filePath: candidate, post: fileSystem.files.get(candidate)! };
+			return { filePath: candidate, ...fileSystem.files.get(candidate)! };
 		}
 	}
 

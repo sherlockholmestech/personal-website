@@ -36,6 +36,11 @@ export const commandCatalog: CommandHelp[] = [
 		group: 'start'
 	},
 	{
+		command: 'photography [collection]',
+		description: 'Fuzzy-find photography collections and preview their frames.',
+		group: 'start'
+	},
+	{
 		command: 'home',
 		description: 'Return to the welcome banner.',
 		group: 'start'
@@ -46,9 +51,9 @@ export const commandCatalog: CommandHelp[] = [
 		group: 'blog'
 	},
 	{
-		command: 'cat <post.md>',
-		description: 'Render a post inline.',
-		group: 'blog'
+		command: 'cat <file>',
+		description: 'Render a post or open a photograph.',
+		group: 'filesystem'
 	},
 	{
 		command: 'pwd',
@@ -77,4 +82,13 @@ export const commandCatalog: CommandHelp[] = [
 	}
 ];
 
-export const helpfulCommands = ['blog', 'projects', 'about', 'links', 'help', 'home', 'clear'];
+export const helpfulCommands = [
+	'blog',
+	'photography',
+	'projects',
+	'about',
+	'links',
+	'help',
+	'home',
+	'clear'
+];

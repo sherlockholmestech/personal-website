@@ -36,10 +36,6 @@
 				>
 			</div>
 			<div class="welcome-summary-row">
-				<span class="welcome-label">writes</span>
-				<strong class="welcome-summary-value">CTF writeups, and my thoughts</strong>
-			</div>
-			<div class="welcome-summary-row">
 				<span class="welcome-label">stack</span>
 				<strong class="welcome-summary-value"
 					>C/C++, Rust, HTML + JavaScript/TypeScript + CSS, Python, Godot Engine</strong
@@ -47,7 +43,7 @@
 			</div>
 			<div class="welcome-summary-row">
 				<span class="welcome-label">start</span>
-				<strong class="welcome-summary-value">type a command to get started!</strong>
+				<strong class="welcome-summary-value">Type a command to get started!</strong>
 			</div>
 		</div>
 
