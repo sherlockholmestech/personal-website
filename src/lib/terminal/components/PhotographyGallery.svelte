@@ -32,10 +32,10 @@
 
 	const browserId = $props.id();
 	const dialogTitleId = `${browserId}-photography-dialog-title`;
-	let query = $state(initialQuery);
-	let appliedInitialQuery = $state(initialQuery);
+	let query = $state('');
+	let appliedInitialQuery = $state<string>();
 	let selectedIndex = $state(0);
-	let activeCollectionSlug = $state(initialCollectionSlug);
+	let activeCollectionSlug = $state('');
 	let selectedPhoto = $state<Photograph>();
 	let selectedPhotoCollection = $state<PhotographyCollection>();
 	let photoDialog = $state<HTMLDialogElement>();

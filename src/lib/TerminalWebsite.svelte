@@ -855,7 +855,11 @@
 	}
 
 	async function updatePhotographyUrl(path: string) {
-		await goto(resolve(`/${path}` as `/photography${string}`), {
+		const route =
+			path === 'photography'
+				? resolve('/photography')
+				: resolve(`/${path}` as `/photography/${string}`);
+		await goto(route, {
 			keepFocus: true,
 			noScroll: true,
 			replaceState: false
