@@ -328,7 +328,7 @@
 								<span>{photo.description ?? photo.alt}</span>
 								{#if photo.location || photo.date || photo.camera}
 									<small>
-										{[photo.location, photo.date, photo.camera].filter(Boolean).join(' · ')}
+										{[photo.location, photo.date, photo.camera].filter(Boolean).join('; ')}
 									</small>
 								{/if}
 							</figcaption>
