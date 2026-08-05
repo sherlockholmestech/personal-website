@@ -2,6 +2,7 @@
 	import { tick } from 'svelte';
 	import { blogSortOptions, type BlogPostMeta, type BlogSort, type MdBlock } from '../types';
 	import { formatPostDate } from '../date';
+	import { shouldHandleFuzzyPickerKeydown } from '../fuzzy-picker';
 	import { isMobileViewport } from '../media';
 	import MarkdownBlocks from './MarkdownBlocks.svelte';
 
@@ -131,7 +132,22 @@
 			onOpen(index);
 		}
 	}
+
+	function handleWindowKeydown(event: KeyboardEvent) {
+		if (event.key === 'Escape') {
+			if (!event.defaultPrevented) {
+				onKeydown(event);
+			}
+			return;
+		}
+
+		if (shouldHandleFuzzyPickerKeydown(event, inputRef)) {
+			onKeydown(event);
+		}
+	}
 </script>
+
+<svelte:window onkeydown={handleWindowKeydown} />
 
 <div class="blog-browser">
 	<div class="blog-browser-header">
@@ -160,7 +176,6 @@
 				enterkeyhint="search"
 				spellcheck={false}
 				oninput={onQueryInput}
-				onkeydown={onKeydown}
 				class="blog-browser-input"
 			/>
 		</label>

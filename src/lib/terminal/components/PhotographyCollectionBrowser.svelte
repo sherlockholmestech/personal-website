@@ -1,5 +1,7 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	import type { Photograph, PhotographyCollection } from '../../../content/photography';
+	import { shouldHandleFuzzyPickerKeydown } from '../fuzzy-picker';
 	import { isMobileViewport } from '../media';
 
 	let {
@@ -21,6 +23,7 @@
 	let query = $state('');
 	let appliedInitialQuery = $state<string>();
 	let selectedIndex = $state(0);
+	let resultsViewport = $state<HTMLDivElement>();
 	let results = $derived(searchCollections(collections, query));
 	let selectedCollection = $derived(results[selectedIndex] ?? results[0]);
 
@@ -37,6 +40,18 @@
 		} else if (selectedIndex >= results.length) {
 			selectedIndex = results.length - 1;
 		}
+	});
+
+	$effect(() => {
+		const viewport = resultsViewport;
+		const selectedSlug = selectedCollection?.slug;
+		if (!viewport || !selectedSlug) return;
+
+		void tick().then(() => {
+			viewport
+				.querySelector<HTMLElement>('.photography-browser-row-selected')
+				?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+		});
 	});
 
 	function searchCollections(photographyCollections: PhotographyCollection[], searchQuery: string) {
@@ -94,14 +109,22 @@
 		if (event.key === 'ArrowUp') {
 			event.preventDefault();
 			moveSelection(-1);
+			return;
 		}
 		if (event.key === 'ArrowDown') {
 			event.preventDefault();
 			moveSelection(1);
+			return;
 		}
 		if (event.key === 'Enter' && selectedCollection) {
 			event.preventDefault();
 			onCollectionOpen(selectedCollection);
+		}
+	}
+
+	function handleWindowKeydown(event: KeyboardEvent) {
+		if (shouldHandleFuzzyPickerKeydown(event, inputRef)) {
+			handleKeydown(event);
 		}
 	}
 
@@ -115,6 +138,8 @@
 		}
 	}
 </script>
+
+<svelte:window onkeydown={handleWindowKeydown} />
 
 <div class="photography-browser">
 	<header class="photography-browser-header">
@@ -146,7 +171,6 @@
 				enterkeyhint="search"
 				spellcheck={false}
 				oninput={handleQueryInput}
-				onkeydown={handleKeydown}
 				class="photography-browser-input"
 			/>
 		</label>
@@ -164,7 +188,11 @@
 					<span>preview</span>
 				</div>
 			{/if}
-			<div class="photography-browser-results" style="counter-reset: collection-row">
+			<div
+				bind:this={resultsViewport}
+				class="photography-browser-results"
+				style="counter-reset: collection-row"
+			>
 				{#if results.length}
 					{#each results as collection, index (collection.slug)}
 						<div
