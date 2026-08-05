@@ -1,0 +1,231 @@
+<script lang="ts">
+	import { tick } from 'svelte';
+	import type { Photograph } from '../../../content/photography';
+	import { isMobileViewport } from '../media';
+
+	let {
+		photograph,
+		onClose
+	}: {
+		photograph?: Photograph;
+		onClose: () => void;
+	} = $props();
+
+	let photoDialog = $state<HTMLDialogElement>();
+	let photoViewerScroll = $state<HTMLDivElement>();
+	let photoViewerImage = $state<HTMLImageElement>();
+	let photoViewerMeta = $state<HTMLDivElement>();
+	let photoViewerMetaHeight = $state(120);
+	let photoZoomed = $state(false);
+	let photoDragging = $state(false);
+	let photoDragMoved = $state(false);
+	let photoDragStartX = 0;
+	let photoDragStartY = 0;
+	let photoDragScrollLeft = 0;
+	let photoDragScrollTop = 0;
+
+	$effect(() => {
+		if (photograph) {
+			resetPhotoInteraction();
+			void showPhoto();
+		} else if (photoDialog?.open) {
+			photoDialog.close();
+		}
+	});
+
+	$effect(() => {
+		const meta = photoViewerMeta;
+		if (!meta) return;
+
+		const updateHeight = () => {
+			photoViewerMetaHeight = Math.ceil(meta.getBoundingClientRect().height);
+		};
+		const resizeObserver = new ResizeObserver(updateHeight);
+		resizeObserver.observe(meta);
+		updateHeight();
+
+		return () => resizeObserver.disconnect();
+	});
+
+	async function showPhoto() {
+		await tick();
+		if (photoDialog && !photoDialog.open) {
+			photoDialog.showModal();
+		}
+	}
+
+	function resetPhotoInteraction() {
+		photoZoomed = false;
+		photoDragging = false;
+		photoDragMoved = false;
+	}
+
+	function closePhoto() {
+		photoDialog?.close();
+	}
+
+	function handleDialogClose() {
+		resetPhotoInteraction();
+		onClose();
+	}
+
+	function handleDialogClick(event: MouseEvent) {
+		if (event.target === event.currentTarget) {
+			closePhoto();
+		}
+	}
+
+	async function togglePhotoZoom(event: MouseEvent) {
+		if (photoDragMoved) {
+			photoDragMoved = false;
+			return;
+		}
+
+		const targetRect = photoViewerImage?.getBoundingClientRect();
+		const keyboardActivation = event.detail === 0;
+		const xRatio =
+			targetRect && !keyboardActivation
+				? clamp((event.clientX - targetRect.left) / targetRect.width, 0, 1)
+				: 0.5;
+		const yRatio =
+			targetRect && !keyboardActivation
+				? clamp((event.clientY - targetRect.top) / targetRect.height, 0, 1)
+				: 0.5;
+
+		photoZoomed = !photoZoomed;
+		photoDragging = false;
+		await tick();
+		centerPhotoZoomPoint(xRatio, yRatio);
+	}
+
+	function handlePhotoPointerDown(event: PointerEvent) {
+		if (!photoZoomed || isMobileViewport() || event.button !== 0 || !photoViewerScroll) return;
+
+		photoDragging = true;
+		photoDragMoved = false;
+		photoDragStartX = event.clientX;
+		photoDragStartY = event.clientY;
+		photoDragScrollLeft = photoViewerScroll.scrollLeft;
+		photoDragScrollTop = photoViewerScroll.scrollTop;
+		(event.currentTarget as HTMLButtonElement).setPointerCapture(event.pointerId);
+		event.preventDefault();
+	}
+
+	function handlePhotoPointerMove(event: PointerEvent) {
+		if (!photoDragging || !photoViewerScroll) return;
+
+		const deltaX = event.clientX - photoDragStartX;
+		const deltaY = event.clientY - photoDragStartY;
+		if (Math.abs(deltaX) > 4 || Math.abs(deltaY) > 4) {
+			photoDragMoved = true;
+		}
+
+		photoViewerScroll.scrollLeft = photoDragScrollLeft - deltaX;
+		photoViewerScroll.scrollTop = photoDragScrollTop - deltaY;
+		event.preventDefault();
+	}
+
+	function handlePhotoPointerUp(event: PointerEvent) {
+		if (!photoDragging) return;
+
+		photoDragging = false;
+		const target = event.currentTarget as HTMLButtonElement;
+		if (target.hasPointerCapture(event.pointerId)) {
+			target.releasePointerCapture(event.pointerId);
+		}
+		if (photoDragMoved) {
+			requestAnimationFrame(() => {
+				photoDragMoved = false;
+			});
+		}
+	}
+
+	function handlePhotoPointerCancel() {
+		photoDragging = false;
+		photoDragMoved = false;
+	}
+
+	function centerPhotoZoomPoint(xRatio: number, yRatio: number) {
+		if (!photoViewerScroll || !photoViewerImage) return;
+
+		const scrollRect = photoViewerScroll.getBoundingClientRect();
+		const targetRect = photoViewerImage.getBoundingClientRect();
+		const pointX = targetRect.left + targetRect.width * xRatio;
+		const pointY = targetRect.top + targetRect.height * yRatio;
+
+		photoViewerScroll.scrollLeft += pointX - (scrollRect.left + photoViewerScroll.clientWidth / 2);
+		photoViewerScroll.scrollTop += pointY - (scrollRect.top + photoViewerScroll.clientHeight / 2);
+	}
+
+	function clamp(value: number, min: number, max: number) {
+		return Math.min(max, Math.max(min, value));
+	}
+</script>
+
+<dialog
+	bind:this={photoDialog}
+	class="photography-photo-viewer"
+	aria-label={photograph ? `Photograph: ${photograph.alt}` : 'Photograph viewer'}
+	onclose={handleDialogClose}
+	onclick={handleDialogClick}
+>
+	{#if photograph}
+		<div
+			class="photography-photo-viewer-stage"
+			style={`--photography-meta-height: ${photoViewerMetaHeight}px`}
+		>
+			<div bind:this={photoViewerScroll} class="photography-photo-viewer-scroll">
+				<div class="photography-photo-viewer-image-stage">
+					<button
+						type="button"
+						class={`photography-photo-viewer-image-button ${photoZoomed ? 'photography-photo-viewer-image-button-zoomed' : ''} ${photoDragging ? 'photography-photo-viewer-image-button-dragging' : ''}`}
+						aria-label={photoZoomed
+							? 'Drag photograph to pan; click to zoom out'
+							: 'Zoom photograph in'}
+						onclick={togglePhotoZoom}
+						onpointerdown={handlePhotoPointerDown}
+						onpointermove={handlePhotoPointerMove}
+						onpointerup={handlePhotoPointerUp}
+						onpointercancel={handlePhotoPointerCancel}
+					>
+						<img
+							bind:this={photoViewerImage}
+							src={photograph.src}
+							alt={photograph.alt}
+							width={photograph.width}
+							height={photograph.height}
+							draggable={false}
+							class="photography-photo-viewer-image"
+						/>
+					</button>
+				</div>
+			</div>
+			<div bind:this={photoViewerMeta} class="photography-photo-viewer-meta">
+				{#if photograph.date || photograph.camera}
+					<dl>
+						{#if photograph.date}
+							<div>
+								<dt>Date</dt>
+								<dd>{photograph.date}</dd>
+							</div>
+						{/if}
+						{#if photograph.camera}
+							<div>
+								<dt>Camera</dt>
+								<dd>{photograph.camera}</dd>
+							</div>
+						{/if}
+					</dl>
+				{/if}
+			</div>
+			<button
+				type="button"
+				class="photography-photo-viewer-close"
+				aria-label="Close photograph"
+				onclick={closePhoto}
+			>
+				X
+			</button>
+		</div>
+	{/if}
+</dialog>
