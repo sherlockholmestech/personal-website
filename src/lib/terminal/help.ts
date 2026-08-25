@@ -2,6 +2,7 @@ export type CommandHelp = {
 	command: string;
 	description: string;
 	group: 'start' | 'blog' | 'filesystem' | 'display';
+	shortcutOrder?: number;
 };
 
 export const commandCatalog: CommandHelp[] = [
@@ -13,12 +14,14 @@ export const commandCatalog: CommandHelp[] = [
 	{
 		command: 'help',
 		description: 'Open this command reference.',
-		group: 'start'
+		group: 'start',
+		shortcutOrder: 6
 	},
 	{
 		command: 'about',
 		description: 'Open the about article.',
-		group: 'start'
+		group: 'start',
+		shortcutOrder: 4
 	},
 	{
 		command: 'info',
@@ -26,29 +29,34 @@ export const commandCatalog: CommandHelp[] = [
 		group: 'start'
 	},
 	{
-		command: 'links',
-		description: 'Show social links.',
-		group: 'start'
+		command: 'socials',
+		description: 'Show social and contact links.',
+		group: 'start',
+		shortcutOrder: 5
 	},
 	{
 		command: 'projects',
 		description: 'Show recent projects.',
-		group: 'start'
+		group: 'start',
+		shortcutOrder: 3
 	},
 	{
 		command: 'photography [collection]',
 		description: 'Fuzzy-find photography collections and preview their frames.',
-		group: 'start'
+		group: 'start',
+		shortcutOrder: 2
 	},
 	{
 		command: 'home',
 		description: 'Return to the welcome banner.',
-		group: 'start'
+		group: 'start',
+		shortcutOrder: 7
 	},
 	{
 		command: 'blog [query]',
 		description: 'Browse posts with search, sort, and markdown preview.',
-		group: 'blog'
+		group: 'blog',
+		shortcutOrder: 1
 	},
 	{
 		command: 'cat <file>',
@@ -78,17 +86,14 @@ export const commandCatalog: CommandHelp[] = [
 	{
 		command: 'clear',
 		description: 'Clear terminal output.',
-		group: 'display'
+		group: 'display',
+		shortcutOrder: 8
 	}
 ];
 
-export const helpfulCommands = [
-	'blog',
-	'photography',
-	'projects',
-	'about',
-	'links',
-	'help',
-	'home',
-	'clear'
-];
+export const helpfulCommands = commandCatalog
+	.filter((command): command is CommandHelp & { shortcutOrder: number } =>
+		Number.isInteger(command.shortcutOrder)
+	)
+	.sort((left, right) => left.shortcutOrder - right.shortcutOrder)
+	.map(({ command }) => command.split(' ')[0]);

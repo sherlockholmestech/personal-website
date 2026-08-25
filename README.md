@@ -83,4 +83,26 @@ filename without its extension:
 /photography/natural-phenomena/20260613_184334_watermark
 ```
 
+## Protected email reveal
+
+The `socials` terminal command keeps the contact email server-side and reveals it only after
+Cloudflare Turnstile verification. Create a Turnstile widget in Cloudflare, copy `.env.example`
+to `.env`, and configure:
+
+- `PUBLIC_TURNSTILE_SITE_KEY`: the public widget site key.
+- `TURNSTILE_SECRET_KEY`: the private Siteverify secret.
+- `TURNSTILE_HOSTNAME`: the exact production hostname returned by Siteverify.
+- `TRUST_CLOUDFLARE_IP_HEADER`: set to `true` only when the origin accepts traffic exclusively
+  through Cloudflare; otherwise the limiter uses the direct client address.
+- `CONTACT_EMAIL`: the address returned after successful verification.
+
+Local development uses Cloudflare's always-pass test keys when the Turnstile keys are omitted.
+`CONTACT_EMAIL` must still be set. Production deliberately has no key fallback.
+
+The endpoint validates the Turnstile action and optional hostname, returns `Cache-Control:
+no-store`, and applies a small per-process request limit. For deployments with multiple
+instances, also apply a Cloudflare rate-limiting rule to `POST /api/contact-email`.
+The Docker build context excludes `.env` files so the contact address and Turnstile secret are
+not copied into image layers.
+
 > To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.

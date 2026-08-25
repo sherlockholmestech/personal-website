@@ -500,7 +500,7 @@
 			return;
 		}
 
-		if (name === 'links') {
+		if (name === 'socials') {
 			history = [...history, { kind: 'socials' }];
 			return;
 		}
