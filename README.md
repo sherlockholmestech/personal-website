@@ -98,6 +98,8 @@ to `.env`, and configure:
 
 Local development uses Cloudflare's always-pass test keys when the Turnstile keys are omitted.
 `CONTACT_EMAIL` must still be set. Production deliberately has no key fallback.
+Restart the development server or production container after changing `.env`; environment files
+are read when the process starts.
 
 The endpoint validates the Turnstile action and optional hostname, returns `Cache-Control:
 no-store`, and applies a small per-process request limit. For deployments with multiple

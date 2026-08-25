@@ -11,7 +11,7 @@
 	import { onDestroy, tick } from 'svelte';
 
 	type RevealStatus =
-		'idle' | 'loading' | 'ready' | 'verifying' | 'revealed' | 'error' | 'rate-limited';
+		'idle' | 'checking' | 'loading' | 'ready' | 'verifying' | 'revealed' | 'error' | 'rate-limited';
 
 	const githubUrl = 'https://github.com/sherlockholmestech';
 	const testSiteKey = '1x00000000000000000000AA';
@@ -26,12 +26,17 @@
 	let statusMessage = $state('');
 	let email = $state('');
 
+	function removeWidget() {
+		const activeWidgetId = widgetId;
+		widgetId = undefined;
+		if (turnstile && activeWidgetId) turnstile.remove(activeWidgetId);
+	}
+
 	function deactivateReveal() {
 		revealController?.abort();
 		revealController = undefined;
 
-		if (turnstile && widgetId) turnstile.remove(widgetId);
-		widgetId = undefined;
+		removeWidget();
 		releaseTurnstileReveal(deactivateReveal);
 
 		if (!destroyed && status !== 'revealed') {
@@ -46,6 +51,28 @@
 		if (!siteKey) {
 			status = 'error';
 			statusMessage = 'email reveal is not configured.';
+			return;
+		}
+
+		status = 'checking';
+		statusMessage = 'checking email reveal...';
+
+		try {
+			const response = await fetch(resolve('/api/contact-email' as const), {
+				headers: { accept: 'application/json' }
+			});
+			const result = (await response.json().catch(() => null)) as {
+				configured?: boolean;
+			} | null;
+
+			if (!response.ok || !result?.configured) {
+				status = 'error';
+				statusMessage = 'email reveal is not configured.';
+				return;
+			}
+		} catch {
+			status = 'error';
+			statusMessage = 'email reveal is unavailable. try again.';
 			return;
 		}
 
@@ -76,11 +103,13 @@
 				callback: (token) => void revealEmail(token),
 				'error-callback': () => {
 					if (destroyed) return;
+					removeWidget();
 					status = 'error';
 					statusMessage = 'verification could not run. try again.';
 				},
 				'expired-callback': () => {
 					if (destroyed) return;
+					removeWidget();
 					status = 'error';
 					statusMessage = 'verification expired. try again.';
 				}
@@ -117,7 +146,7 @@
 			if (!response.ok || !result?.email) {
 				status = response.status === 429 ? 'rate-limited' : 'error';
 				statusMessage = result?.message ?? 'verification failed. try again.';
-				if (turnstile && widgetId) turnstile.reset(widgetId);
+				removeWidget();
 				return;
 			}
 
@@ -125,16 +154,13 @@
 			status = 'revealed';
 			statusMessage = '';
 
-			if (turnstile && widgetId) {
-				turnstile.remove(widgetId);
-				widgetId = undefined;
-			}
+			removeWidget();
 			releaseTurnstileReveal(deactivateReveal);
 		} catch {
 			if (destroyed || controller.signal.aborted) return;
+			removeWidget();
 			status = 'error';
 			statusMessage = 'email reveal is unavailable. try again.';
-			if (turnstile && widgetId) turnstile.reset(widgetId);
 		} finally {
 			if (revealController === controller) revealController = undefined;
 		}
@@ -179,7 +205,9 @@
 					verify to reveal
 				</button>
 			{:else}
-				<div bind:this={challengeContainer} class="min-h-[65px] w-full max-w-[300px]"></div>
+				{#if status === 'loading' || status === 'ready' || status === 'verifying'}
+					<div bind:this={challengeContainer} class="min-h-[65px] w-full max-w-[300px]"></div>
+				{/if}
 				{#if statusMessage}
 					<div class="mt-[4px] text-[var(--tx-2)]" role="status">{statusMessage}</div>
 				{/if}

@@ -27,7 +27,7 @@ type TurnstileResponse = {
 
 const attemptBuckets = new Map<string, AttemptBucket>();
 
-function noStoreJson(body: Record<string, string>, status = 200, extraHeaders?: HeadersInit) {
+function noStoreJson(body: Record<string, unknown>, status = 200, extraHeaders?: HeadersInit) {
 	return json(body, {
 		status,
 		headers: {
@@ -79,12 +79,25 @@ function consumeAttempt(address: string) {
 	return 0;
 }
 
-export const POST: RequestHandler = async ({ request, getClientAddress }) => {
+function contactConfiguration() {
 	const email = env.CONTACT_EMAIL?.trim();
 	const secretKey = env.TURNSTILE_SECRET_KEY?.trim() || (import.meta.env.DEV ? testSecretKey : '');
 	const usingTestSecret = import.meta.env.DEV && testSecretKeys.has(secretKey);
+	const configured =
+		Boolean(email && secretKey) && (import.meta.env.DEV || !testSecretKeys.has(secretKey));
 
-	if (!email || !secretKey || (!import.meta.env.DEV && testSecretKeys.has(secretKey))) {
+	return { configured, email, secretKey, usingTestSecret };
+}
+
+export const GET: RequestHandler = () => {
+	const { configured } = contactConfiguration();
+	return noStoreJson({ configured }, configured ? 200 : 503);
+};
+
+export const POST: RequestHandler = async ({ request, getClientAddress }) => {
+	const { configured, email, secretKey, usingTestSecret } = contactConfiguration();
+
+	if (!configured || !email || !secretKey) {
 		return noStoreJson({ message: 'email reveal is not configured' }, 503);
 	}
 
