@@ -17,7 +17,6 @@
 			href={resolve(entry.url as `/blog/${string}`)}
 			class="text-[var(--cyan)] no-underline hover:text-[var(--yellow)]"
 		>
-			{entry.directory ? '' : ''}
 			{entry.name}
 		</a>
 	{/each}

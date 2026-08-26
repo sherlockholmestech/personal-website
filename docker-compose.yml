@@ -17,6 +17,7 @@ services:
       TURNSTILE_HOSTNAME: ${TURNSTILE_HOSTNAME:-}
       TRUST_CLOUDFLARE_IP_HEADER: ${TRUST_CLOUDFLARE_IP_HEADER:-false}
       CONTACT_EMAIL: ${CONTACT_EMAIL:-}
+      DOWNLOAD_ACCESS_SECRET: ${DOWNLOAD_ACCESS_SECRET:-}
     volumes:
       - './dists:/data/dists:ro'
     restart: unless-stopped

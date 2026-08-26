@@ -95,6 +95,8 @@ to `.env`, and configure:
 - `TRUST_CLOUDFLARE_IP_HEADER`: set to `true` only when the origin accepts traffic exclusively
   through Cloudflare; otherwise the limiter uses the direct client address.
 - `CONTACT_EMAIL`: the address returned after successful verification.
+- `DOWNLOAD_ACCESS_SECRET`: a random secret used to sign short-lived distribution download
+  access cookies. Generate at least 32 random characters and keep it server-side.
 
 Local development uses Cloudflare's always-pass test keys when the Turnstile keys are omitted.
 `CONTACT_EMAIL` must still be set. Production deliberately has no key fallback.
@@ -106,5 +108,12 @@ no-store`, and applies a small per-process request limit. For deployments with m
 instances, also apply a Cloudflare rate-limiting rule to `POST /api/contact-email`.
 The Docker build context excludes `.env` files so the contact address and Turnstile secret are
 not copied into image layers.
+
+Distribution links use the same Turnstile widget with a separate action. Successful verification
+sets a signed, HTTP-only access cookie for ten minutes. `/dist/*` rejects requests without that
+cookie and serves authorized files with private, no-store caching while retaining HEAD and byte
+range support. Apply a Cloudflare rate-limiting rule to `POST /api/dist-access` in production.
+After first deploying the gate, purge any previously cached `/dist/*` responses and ensure
+Cloudflare cache rules do not override the route's private, no-store response header.
 
 > To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.

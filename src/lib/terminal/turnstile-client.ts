@@ -1,3 +1,5 @@
+import { env } from '$env/dynamic/public';
+
 export type TurnstileApi = {
 	render: (
 		container: HTMLElement,
@@ -7,8 +9,10 @@ export type TurnstileApi = {
 			theme: 'auto';
 			size: 'flexible';
 			callback: (token: string) => void;
-			'error-callback': () => void;
+			'error-callback': (errorCode?: string) => void;
 			'expired-callback': () => void;
+			'timeout-callback': () => void;
+			'unsupported-callback': () => void;
 		}
 	) => string;
 	remove: (widgetId: string) => void;
@@ -20,7 +24,13 @@ type TurnstileWindow = Window & {
 };
 
 let loadPromise: Promise<TurnstileApi> | undefined;
-let activeRevealCleanup: (() => void) | undefined;
+let activeChallengeCleanup: (() => void) | undefined;
+const loadTimeoutMs = 10_000;
+const testSiteKey = '1x00000000000000000000AA';
+
+export function turnstileSiteKey() {
+	return env.PUBLIC_TURNSTILE_SITE_KEY || (import.meta.env.DEV ? testSiteKey : '');
+}
 
 export function loadTurnstile() {
 	const turnstileWindow = window as TurnstileWindow;
@@ -30,8 +40,13 @@ export function loadTurnstile() {
 	loadPromise = new Promise<TurnstileApi>((resolve, reject) => {
 		const existingScript = document.querySelector<HTMLScriptElement>('script[data-turnstile-api]');
 		const script = existingScript ?? document.createElement('script');
+		const timeout = window.setTimeout(
+			() => fail('Turnstile API timed out while loading'),
+			loadTimeoutMs
+		);
 
 		const cleanupListeners = () => {
+			window.clearTimeout(timeout);
 			script.removeEventListener('load', handleLoad);
 			script.removeEventListener('error', handleError);
 		};
@@ -73,14 +88,14 @@ export function loadTurnstile() {
 	return loadPromise;
 }
 
-export function claimTurnstileReveal(cleanup: () => void) {
-	if (activeRevealCleanup === cleanup) return;
+export function claimTurnstileChallenge(cleanup: () => void) {
+	if (activeChallengeCleanup === cleanup) return;
 
-	const previousCleanup = activeRevealCleanup;
-	activeRevealCleanup = cleanup;
+	const previousCleanup = activeChallengeCleanup;
+	activeChallengeCleanup = cleanup;
 	previousCleanup?.();
 }
 
-export function releaseTurnstileReveal(cleanup: () => void) {
-	if (activeRevealCleanup === cleanup) activeRevealCleanup = undefined;
+export function releaseTurnstileChallenge(cleanup: () => void) {
+	if (activeChallengeCleanup === cleanup) activeChallengeCleanup = undefined;
 }

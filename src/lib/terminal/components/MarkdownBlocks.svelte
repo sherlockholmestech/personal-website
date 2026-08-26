@@ -1,8 +1,8 @@
 <script lang="ts">
 	/* eslint-disable svelte/no-at-html-tags */
 
-	import { resolve } from '$app/paths';
 	import HighlightedCode from '$lib/HighlightedCode.svelte';
+	import DistDownload from './DistDownload.svelte';
 	import type { MdBlock } from '../types';
 
 	let {
@@ -34,16 +34,7 @@
 	{:else if block.type === 'quote'}
 		<blockquote>{@html block.html}</blockquote>
 	{:else if block.type === 'dist'}
-		<a
-			href={resolve(block.href as `/dist/${string}`)}
-			download
-			class="not-prose my-[16px] flex min-h-[42px] w-full flex-wrap items-center gap-x-[10px] gap-y-[4px] border border-[var(--green)] bg-[var(--bg-2)] px-[14px] py-[8px] font-bold text-[var(--green)] no-underline hover:bg-[var(--green)] hover:text-[var(--bg)] focus-visible:bg-[var(--green)] focus-visible:text-[var(--bg)] focus-visible:outline-none"
-			aria-label={`${block.label}: ${block.file}`}
-		>
-			<span aria-hidden="true">&gt;</span>
-			<span>{block.label}</span>
-			<span class="font-normal break-all opacity-70">[{block.file}]</span>
-		</a>
+		<DistDownload href={block.href} label={block.label} file={block.file} />
 	{:else if block.type === 'code'}
 		<div
 			class={`relative overflow-visible border-y border-[var(--border)] bg-[var(--bg)] max-[760px]:mx-[-2px] ${compactCode ? 'my-[10px]' : 'my-[14px]'}`}

@@ -128,9 +128,8 @@ export function buildTree(fileSystem: FileSystem, directoryPath: string, prefix 
 		const last = index === entries.length - 1;
 		const branch = last ? '└── ' : '├── ';
 		const nextPrefix = prefix + (last ? '    ' : '│   ');
-		const icon = entry.type === 'directory' ? ' ' : ' ';
 		return [
-			`${prefix}${branch}${icon}${entry.name}`,
+			`${prefix}${branch}${entry.name}`,
 			...(entry.type === 'directory' ? buildTree(fileSystem, entry.path, nextPrefix) : [])
 		];
 	});

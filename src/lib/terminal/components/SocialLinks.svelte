@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { env } from '$env/dynamic/public';
 	import { resolve } from '$app/paths';
 	import {
-		claimTurnstileReveal,
+		claimTurnstileChallenge,
 		loadTurnstile,
-		releaseTurnstileReveal,
+		releaseTurnstileChallenge,
+		turnstileSiteKey,
 		type TurnstileApi
 	} from '$lib/terminal/turnstile-client';
 	import { TURNSTILE_EMAIL_ACTION } from '$lib/turnstile';
@@ -14,8 +14,7 @@
 		'idle' | 'checking' | 'loading' | 'ready' | 'verifying' | 'revealed' | 'error' | 'rate-limited';
 
 	const githubUrl = 'https://github.com/sherlockholmestech';
-	const testSiteKey = '1x00000000000000000000AA';
-	const siteKey = env.PUBLIC_TURNSTILE_SITE_KEY || (import.meta.env.DEV ? testSiteKey : '');
+	const siteKey = turnstileSiteKey();
 
 	let challengeContainer = $state<HTMLDivElement>();
 	let turnstile: TurnstileApi | undefined;
@@ -37,7 +36,7 @@
 		revealController = undefined;
 
 		removeWidget();
-		releaseTurnstileReveal(deactivateReveal);
+		releaseTurnstileChallenge(deactivateReveal);
 
 		if (!destroyed && status !== 'revealed') {
 			status = 'idle';
@@ -76,7 +75,7 @@
 			return;
 		}
 
-		claimTurnstileReveal(deactivateReveal);
+		claimTurnstileChallenge(deactivateReveal);
 
 		if (turnstile && widgetId) {
 			status = 'ready';
@@ -112,10 +111,22 @@
 					removeWidget();
 					status = 'error';
 					statusMessage = 'verification expired. try again.';
+				},
+				'timeout-callback': () => {
+					if (destroyed) return;
+					removeWidget();
+					status = 'error';
+					statusMessage = 'verification timed out. try again.';
+				},
+				'unsupported-callback': () => {
+					if (destroyed) return;
+					removeWidget();
+					status = 'error';
+					statusMessage = 'verification is not supported by this browser.';
 				}
 			});
 		} catch {
-			releaseTurnstileReveal(deactivateReveal);
+			releaseTurnstileChallenge(deactivateReveal);
 			if (destroyed) return;
 			status = 'error';
 			statusMessage = 'verification could not load. try again.';
@@ -145,7 +156,7 @@
 
 			if (!response.ok || !result?.email) {
 				status = response.status === 429 ? 'rate-limited' : 'error';
-				statusMessage = result?.message ?? 'verification failed. try again.';
+				statusMessage = result?.message ?? "I don't think you are human! Retry the challenge?";
 				removeWidget();
 				return;
 			}
@@ -155,7 +166,7 @@
 			statusMessage = '';
 
 			removeWidget();
-			releaseTurnstileReveal(deactivateReveal);
+			releaseTurnstileChallenge(deactivateReveal);
 		} catch {
 			if (destroyed || controller.signal.aborted) return;
 			removeWidget();
@@ -202,7 +213,7 @@
 					onclick={startReveal}
 					class="cursor-pointer bg-transparent p-0 text-left font-normal text-[var(--cyan)] underline decoration-[color-mix(in_srgb,var(--cyan)_65%,transparent)] underline-offset-[3px] hover:text-[var(--yellow)] focus-visible:text-[var(--yellow)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--tx)]"
 				>
-					verify to reveal
+					are you human?
 				</button>
 			{:else}
 				{#if status === 'loading' || status === 'ready' || status === 'verifying'}
