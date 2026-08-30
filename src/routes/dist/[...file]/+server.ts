@@ -74,8 +74,11 @@ const download: RequestHandler = async ({ params, request, cookies }) => {
 			status: range ? 206 : 200,
 			headers
 		});
-	} catch {
-		return notFound();
+	} catch (error) {
+		if (isMissingFileError(error)) return notFound();
+
+		console.error('Failed to serve distribution file', error);
+		return serverError();
 	}
 };
 
@@ -161,4 +164,21 @@ function forbidden(head: boolean) {
 			'Content-Type': 'text/plain; charset=utf-8'
 		})
 	});
+}
+
+function serverError() {
+	return new Response('Distribution service unavailable', {
+		status: 500,
+		headers: protectedHeaders({
+			'Content-Type': 'text/plain; charset=utf-8'
+		})
+	});
+}
+
+function isMissingFileError(error: unknown) {
+	return (
+		error instanceof Error &&
+		'code' in error &&
+		(error.code === 'ENOENT' || error.code === 'ENOTDIR')
+	);
 }

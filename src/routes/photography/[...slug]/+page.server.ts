@@ -1,13 +1,13 @@
-import { loadTerminalPageData } from '$lib/blog';
 import { resolvePhotographyPath } from '$lib/photography';
+import type { PageServerLoad } from './$types';
 
-export function load({ params }: { params: { slug: string } }) {
+export const load: PageServerLoad = ({ params }) => {
 	const requestedPath = ['photography', params.slug].filter(Boolean).join('/');
 	const photography = resolvePhotographyPath(requestedPath);
 
-	return loadTerminalPageData({
+	return {
 		requestedPath,
 		photography,
 		notFound: !photography
-	});
-}
+	};
+};

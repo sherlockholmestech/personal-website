@@ -7,3 +7,6 @@ bun.lockb
 
 # Miscellaneous
 /static/
+AGENTS.md
+src/content/**/*.md
+src/content/**/*.mdx

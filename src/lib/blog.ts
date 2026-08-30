@@ -1,13 +1,12 @@
 import matter from 'gray-matter';
-import type { PhotographyRouteState } from '$lib/photography';
 import type { BlogPost, BlogPostMeta } from '$lib/terminal/types';
 import aboutRaw from '../content/about.md?raw';
 
 type Frontmatter = {
-	title?: string;
-	description?: string;
-	date?: string | Date;
-	tags?: string[];
+	title?: unknown;
+	description?: unknown;
+	date?: unknown;
+	tags?: unknown;
 };
 
 const modules = import.meta.glob('/src/content/blog/**/*.mdx', {
@@ -23,11 +22,20 @@ const posts = Object.entries(modules)
 	.map(([filePath, raw]) => toPost(filePath, raw))
 	.sort((a, b) => b.date.localeCompare(a.date));
 const postMetas = posts.map(toPostMeta);
-const postsByPath = new Map(posts.map((post) => [post.path, post]));
+const postsByPath = indexPosts(posts);
+const postDirectories = indexPostDirectories(posts);
 const aboutPost = toPost(ABOUT_FILE_PATH, aboutRaw);
 
-function loadPostMetas() {
-	return { posts: [...postMetas] };
+export type BlogPathResolution =
+	| { kind: 'post'; path: string; post: BlogPost }
+	| { kind: 'directory'; path: string }
+	| { kind: 'missing'; path: string };
+
+export function loadTerminalLayoutData() {
+	return {
+		posts: postMetas,
+		about: aboutPost
+	};
 }
 
 export function loadPost(path: string) {
@@ -38,33 +46,26 @@ export function loadAboutPost() {
 	return aboutPost;
 }
 
-export function loadTerminalPageData(
-	options: {
-		requestedPath?: string;
-		post?: BlogPost;
-		photography?: PhotographyRouteState;
-		notFound?: boolean;
-	} = {}
-) {
-	return {
-		...loadPostMetas(),
-		about: aboutPost,
-		...options
-	};
+export function resolveBlogPath(path: string): BlogPathResolution {
+	const normalizedPath = normalizePostPath(path);
+	const post = postsByPath.get(normalizedPath);
+
+	if (post) {
+		return { kind: 'post', path: normalizedPath, post };
+	}
+	if (postDirectories.has(normalizedPath)) {
+		return { kind: 'directory', path: normalizedPath };
+	}
+
+	return { kind: 'missing', path: normalizedPath };
 }
 
 export function normalizePostPath(path: string) {
 	return path
-		.replace(/^\/+/, '')
+		.trim()
+		.replace(/^\/+|\/+$/g, '')
 		.replace(/\.mdx?$/, '')
 		.replace(/\/index$/, '');
-}
-
-export function hasPostOrDirectory(path: string) {
-	const normalizedPath = normalizePostPath(path);
-	return postMetas.some(
-		(post) => post.path === normalizedPath || post.path.startsWith(`${normalizedPath}/`)
-	);
 }
 
 export function postPreviewMarkdown(markdown: string) {
@@ -118,13 +119,16 @@ function toPostMeta(post: BlogPost): BlogPostMeta {
 
 function toMeta(filePath: string, frontmatter: Frontmatter): BlogPostMeta {
 	const path = postPath(filePath);
+	const title = requiredString(frontmatter.title, 'title', filePath);
+	const description = requiredString(frontmatter.description, 'description', filePath);
+	const tags = requiredTags(frontmatter.tags, filePath);
 
 	return {
 		path,
-		title: frontmatter.title ?? titleFromPath(path),
-		description: frontmatter.description ?? '',
-		date: normalizeDate(frontmatter.date),
-		tags: frontmatter.tags ?? []
+		title,
+		description,
+		date: normalizeDate(frontmatter.date, filePath),
+		tags
 	};
 }
 
@@ -132,8 +136,7 @@ function postPath(filePath: string) {
 	return normalizePostPath(filePath.replace('/src/content/', ''));
 }
 
-function normalizeDate(value?: string | Date) {
-	if (!value) return '1970-01-01';
+function normalizeDate(value: unknown, filePath: string) {
 	if (value instanceof Date && !Number.isNaN(value.getTime())) {
 		const year = value.getUTCFullYear();
 		const month = String(value.getUTCMonth() + 1).padStart(2, '0');
@@ -142,16 +145,63 @@ function normalizeDate(value?: string | Date) {
 	}
 	if (typeof value === 'string') {
 		const trimmed = value.trim();
-		return /^\d{4}-\d{2}-\d{2}$/.test(trimmed) ? trimmed : value;
+		if (isIsoDate(trimmed)) return trimmed;
 	}
-	return String(value);
+
+	throw new Error(`${filePath}: frontmatter "date" must be a valid YYYY-MM-DD date`);
 }
 
-function titleFromPath(path: string) {
-	return path
-		.split('/')
-		.at(-1)!
-		.split('-')
-		.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-		.join(' ');
+function requiredString(value: unknown, field: string, filePath: string) {
+	if (typeof value === 'string' && value.trim()) return value.trim();
+	throw new Error(`${filePath}: frontmatter "${field}" must be a non-empty string`);
+}
+
+function requiredTags(value: unknown, filePath: string) {
+	if (
+		Array.isArray(value) &&
+		value.every((tag): tag is string => typeof tag === 'string' && Boolean(tag.trim()))
+	) {
+		return value.map((tag) => tag.trim());
+	}
+
+	throw new Error(`${filePath}: frontmatter "tags" must be an array of non-empty strings`);
+}
+
+function isIsoDate(value: string) {
+	const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+	if (!match) return false;
+
+	const [, year, month, day] = match;
+	const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+	return (
+		date.getUTCFullYear() === Number(year) &&
+		date.getUTCMonth() === Number(month) - 1 &&
+		date.getUTCDate() === Number(day)
+	);
+}
+
+function indexPosts(entries: BlogPost[]) {
+	const index = new Map<string, BlogPost>();
+
+	for (const post of entries) {
+		if (index.has(post.path)) {
+			throw new Error(`Duplicate blog path: ${post.path}`);
+		}
+		index.set(post.path, post);
+	}
+
+	return index;
+}
+
+function indexPostDirectories(entries: BlogPost[]) {
+	const directories = new Set<string>();
+
+	for (const post of entries) {
+		const parts = post.path.split('/');
+		for (let index = 1; index < parts.length; index += 1) {
+			directories.add(parts.slice(0, index).join('/'));
+		}
+	}
+
+	return directories;
 }

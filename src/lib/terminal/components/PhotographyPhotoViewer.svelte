@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import type { Photograph } from '../../../content/photography';
+	import { centerElementPoint, pointRatio } from '../geometry';
 	import { isMobileViewport } from '../media';
 
 	let {
@@ -83,19 +84,15 @@
 
 		const targetRect = photoViewerImage?.getBoundingClientRect();
 		const keyboardActivation = event.detail === 0;
-		const xRatio =
+		const point =
 			targetRect && !keyboardActivation
-				? clamp((event.clientX - targetRect.left) / targetRect.width, 0, 1)
-				: 0.5;
-		const yRatio =
-			targetRect && !keyboardActivation
-				? clamp((event.clientY - targetRect.top) / targetRect.height, 0, 1)
-				: 0.5;
+				? pointRatio(targetRect, event.clientX, event.clientY)
+				: null;
 
 		photoZoomed = !photoZoomed;
 		photoDragging = false;
 		await tick();
-		centerPhotoZoomPoint(xRatio, yRatio);
+		centerPhotoZoomPoint(point?.x ?? 0.5, point?.y ?? 0.5);
 	}
 
 	function handlePhotoPointerDown(event: PointerEvent) {
@@ -147,18 +144,7 @@
 
 	function centerPhotoZoomPoint(xRatio: number, yRatio: number) {
 		if (!photoViewerScroll || !photoViewerImage) return;
-
-		const scrollRect = photoViewerScroll.getBoundingClientRect();
-		const targetRect = photoViewerImage.getBoundingClientRect();
-		const pointX = targetRect.left + targetRect.width * xRatio;
-		const pointY = targetRect.top + targetRect.height * yRatio;
-
-		photoViewerScroll.scrollLeft += pointX - (scrollRect.left + photoViewerScroll.clientWidth / 2);
-		photoViewerScroll.scrollTop += pointY - (scrollRect.top + photoViewerScroll.clientHeight / 2);
-	}
-
-	function clamp(value: number, min: number, max: number) {
-		return Math.min(max, Math.max(min, value));
+		centerElementPoint(photoViewerScroll, photoViewerImage, xRatio, yRatio);
 	}
 </script>
 

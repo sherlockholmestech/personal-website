@@ -1,10 +1,11 @@
-import { loadAboutPost, loadTerminalPageData } from '$lib/blog';
+import { loadAboutPost } from '$lib/blog';
+import type { PageServerLoad } from './$types';
 
-export function load() {
+export const load: PageServerLoad = () => {
 	const about = loadAboutPost();
 
-	return loadTerminalPageData({
+	return {
 		post: about,
 		requestedPath: about.path
-	});
-}
+	};
+};

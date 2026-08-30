@@ -10,11 +10,17 @@
 		onPhotoOpen: (photograph: Photograph) => void;
 	} = $props();
 
-	let featuredPhotographs = $derived(
-		collection.photographs.filter((photograph) => photograph.featured)
-	);
-	let tiledPhotographs = $derived(
-		collection.photographs.filter((photograph) => !photograph.featured)
+	let photographGroups = $derived(
+		collection.photographs.reduce(
+			(groups, photograph) => {
+				groups[photograph.featured ? 'featured' : 'tiled'].push(photograph);
+				return groups;
+			},
+			{ featured: [], tiled: [] } as {
+				featured: Photograph[];
+				tiled: Photograph[];
+			}
+		)
 	);
 </script>
 
@@ -22,16 +28,16 @@
 	<div class="photography-collection-page-scroll">
 		{#if collection.photographs.length}
 			<div class="photography-collection-page-grid">
-				{#each featuredPhotographs as photograph (photograph.id)}
+				{#each photographGroups.featured as photograph (photograph.id)}
 					<PhotographyTile
 						{photograph}
 						sizes="(max-width: 760px) calc(100vw - 40px), 1080px"
 						onOpen={onPhotoOpen}
 					/>
 				{/each}
-				{#if tiledPhotographs.length}
+				{#if photographGroups.tiled.length}
 					<div class="photography-collection-page-columns">
-						{#each tiledPhotographs as photograph (photograph.id)}
+						{#each photographGroups.tiled as photograph (photograph.id)}
 							<PhotographyTile
 								{photograph}
 								sizes="(max-width: 760px) calc(100vw - 40px), 532px"

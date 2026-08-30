@@ -1,8 +1,8 @@
 import { listEntries, normalizePath, type FileSystem, type FsEntry } from './filesystem';
 import { commandCatalog } from './help';
 
-const commands = commandCatalog.map((entry) => entry.command.split(/\s+/, 1)[0]);
-const pathCommands = new Set(['cat', 'cd', 'ls', 'tree']);
+const commands = commandCatalog.map((entry) => entry.name);
+const commandsByName = new Map(commandCatalog.map((entry) => [entry.name, entry]));
 
 export type CompletionResult = {
 	input: string;
@@ -26,7 +26,8 @@ export function completeTerminalInput(
 	}
 
 	const command = beforeCursor.trimStart().split(/\s+/, 1)[0];
-	if (!pathCommands.has(command)) return undefined;
+	const commandDefinition = commandsByName.get(command);
+	if (!commandDefinition?.completion) return undefined;
 
 	const tokenMatch = beforeCursor.match(/(?:^|\s)(\S*)$/);
 	if (!tokenMatch) return undefined;
@@ -38,7 +39,7 @@ export function completeTerminalInput(
 	const fragment = token.slice(lastSlash + 1);
 	const directoryPath = normalizePath(directoryToken || '.', cwd);
 	const entries = listEntries(fileSystem, directoryPath).filter(
-		(entry) => command !== 'cd' || entry.type === 'directory'
+		(entry) => commandDefinition.completion !== 'directory' || entry.type === 'directory'
 	);
 	const matches = entries
 		.filter((entry) => entry.name.startsWith(fragment))

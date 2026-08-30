@@ -12,6 +12,7 @@ export const HOME_DIRECTORY = '/home/sherlock';
 export type FileSystem = {
 	files: Map<string, VirtualFile>;
 	directories: Set<string>;
+	entriesByDirectory: Map<string, FsEntry[]>;
 };
 
 export type VirtualFile =
@@ -44,7 +45,11 @@ export function createFileSystem(posts: BlogPostMeta[]): FileSystem {
 		}
 	}
 
-	return { files, directories };
+	return {
+		files,
+		directories,
+		entriesByDirectory: indexDirectoryEntries(files, directories)
+	};
 }
 
 export function normalizePath(target: string, cwd: string) {
@@ -102,24 +107,7 @@ export function resolveFile(fileSystem: FileSystem, path: string) {
 }
 
 export function listEntries(fileSystem: FileSystem, directoryPath: string) {
-	const entries = new Map<string, FsEntry>();
-	const prefix = directoryPath === ROOT_DIRECTORY ? '/' : `${directoryPath}/`;
-
-	for (const dir of fileSystem.directories) {
-		if (!dir.startsWith(prefix) || dir === directoryPath) continue;
-		const rest = dir.slice(prefix.length);
-		if (!rest || rest.includes('/')) continue;
-		entries.set(rest, { name: rest, path: dir, type: 'directory' });
-	}
-
-	for (const filePath of fileSystem.files.keys()) {
-		if (!filePath.startsWith(prefix)) continue;
-		const rest = filePath.slice(prefix.length);
-		if (!rest || rest.includes('/')) continue;
-		entries.set(rest, { name: rest, path: filePath, type: 'file' });
-	}
-
-	return Array.from(entries.values()).sort((a, b) => a.name.localeCompare(b.name));
+	return fileSystem.entriesByDirectory.get(directoryPath) ?? [];
 }
 
 export function buildTree(fileSystem: FileSystem, directoryPath: string, prefix = ''): string[] {
@@ -163,4 +151,52 @@ function ensureDirectoriesForFile(filePath: string, directories: Set<string>) {
 		const dir = `/${parts.slice(0, index).join('/')}`;
 		directories.add(dir);
 	}
+}
+
+function indexDirectoryEntries(
+	files: Map<string, VirtualFile>,
+	directories: Set<string>
+): Map<string, FsEntry[]> {
+	const entriesByDirectory = new Map<string, FsEntry[]>();
+
+	const addEntry = (directoryPath: string, entry: FsEntry) => {
+		const entries = entriesByDirectory.get(directoryPath);
+		if (entries) {
+			entries.push(entry);
+		} else {
+			entriesByDirectory.set(directoryPath, [entry]);
+		}
+	};
+
+	for (const directoryPath of directories) {
+		if (directoryPath === ROOT_DIRECTORY) continue;
+		addEntry(parentPath(directoryPath), {
+			name: pathName(directoryPath),
+			path: directoryPath,
+			type: 'directory'
+		});
+	}
+
+	for (const filePath of files.keys()) {
+		addEntry(parentPath(filePath), {
+			name: pathName(filePath),
+			path: filePath,
+			type: 'file'
+		});
+	}
+
+	for (const entries of entriesByDirectory.values()) {
+		entries.sort((left, right) => left.name.localeCompare(right.name));
+	}
+
+	return entriesByDirectory;
+}
+
+function parentPath(path: string) {
+	const index = path.lastIndexOf('/');
+	return index <= 0 ? ROOT_DIRECTORY : path.slice(0, index);
+}
+
+function pathName(path: string) {
+	return path.slice(path.lastIndexOf('/') + 1);
 }

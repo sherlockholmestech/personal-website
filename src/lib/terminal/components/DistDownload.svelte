@@ -143,6 +143,7 @@
 				status = response.status === 429 ? 'rate-limited' : 'error';
 				statusMessage = result?.message ?? "I don't think you are human! Retry the challenge?";
 				removeWidget();
+				releaseTurnstileChallenge(deactivateChallenge);
 				return;
 			}
 
@@ -162,6 +163,7 @@
 	function fail(message: string) {
 		if (destroyed) return;
 		removeWidget();
+		releaseTurnstileChallenge(deactivateChallenge);
 		status = 'error';
 		statusMessage = message;
 	}

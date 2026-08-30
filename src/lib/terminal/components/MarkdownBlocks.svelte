@@ -13,8 +13,8 @@
 		compactCode?: boolean;
 	} = $props();
 
-	function lineNumbers(code: string) {
-		return Array.from({ length: code.split('\n').length }, (_, index) => index + 1);
+	function lineNumbers(lineCount: number) {
+		return Array.from({ length: lineCount }, (_, index) => index + 1);
 	}
 </script>
 
@@ -52,7 +52,7 @@
 					class={`code-line-numbers m-0 list-none justify-self-stretch border-r border-[var(--border)] py-[10px] pr-[8px] pl-[12px] text-right text-[var(--tx-2)] tabular-nums max-[760px]:hidden ${compactCode ? 'hidden' : ''}`}
 					aria-hidden="true"
 				>
-					{#each lineNumbers(block.code) as line (line)}
+					{#each lineNumbers(block.lineCount) as line (line)}
 						<li>{line}</li>
 					{/each}
 				</ol>

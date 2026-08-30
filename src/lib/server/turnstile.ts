@@ -9,6 +9,7 @@ const testSecretKeys = new Set([
 	'2x0000000000000000000000000000000AA',
 	'3x0000000000000000000000000000000AA'
 ]);
+const rejectedSecretKeys = new Set(['your-turnstile-secret-key']);
 
 type TurnstileResponse = {
 	success: boolean;
@@ -39,7 +40,10 @@ export function noStoreJson(
 export function turnstileConfiguration() {
 	const secretKey = env.TURNSTILE_SECRET_KEY?.trim() || (import.meta.env.DEV ? testSecretKey : '');
 	const usingTestSecret = import.meta.env.DEV && testSecretKeys.has(secretKey);
-	const configured = Boolean(secretKey) && (import.meta.env.DEV || !testSecretKeys.has(secretKey));
+	const configured =
+		Boolean(secretKey) &&
+		!rejectedSecretKeys.has(secretKey) &&
+		(import.meta.env.DEV || !testSecretKeys.has(secretKey));
 
 	return { configured, secretKey, usingTestSecret };
 }

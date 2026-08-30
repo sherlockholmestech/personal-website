@@ -55,24 +55,32 @@
 
 		status = 'checking';
 		statusMessage = 'checking email reveal...';
+		revealController?.abort();
+		const controller = new AbortController();
+		revealController = controller;
 
 		try {
 			const response = await fetch(resolve('/api/contact-email' as const), {
-				headers: { accept: 'application/json' }
+				headers: { accept: 'application/json' },
+				signal: controller.signal
 			});
 			const result = (await response.json().catch(() => null)) as {
 				configured?: boolean;
 			} | null;
 
+			if (destroyed || controller.signal.aborted) return;
 			if (!response.ok || !result?.configured) {
 				status = 'error';
 				statusMessage = 'email reveal is not configured.';
 				return;
 			}
 		} catch {
+			if (destroyed || controller.signal.aborted) return;
 			status = 'error';
 			statusMessage = 'email reveal is unavailable. try again.';
 			return;
+		} finally {
+			if (revealController === controller) revealController = undefined;
 		}
 
 		claimTurnstileChallenge(deactivateReveal);
@@ -100,30 +108,10 @@
 				theme: 'auto',
 				size: 'flexible',
 				callback: (token) => void revealEmail(token),
-				'error-callback': () => {
-					if (destroyed) return;
-					removeWidget();
-					status = 'error';
-					statusMessage = 'verification could not run. try again.';
-				},
-				'expired-callback': () => {
-					if (destroyed) return;
-					removeWidget();
-					status = 'error';
-					statusMessage = 'verification expired. try again.';
-				},
-				'timeout-callback': () => {
-					if (destroyed) return;
-					removeWidget();
-					status = 'error';
-					statusMessage = 'verification timed out. try again.';
-				},
-				'unsupported-callback': () => {
-					if (destroyed) return;
-					removeWidget();
-					status = 'error';
-					statusMessage = 'verification is not supported by this browser.';
-				}
+				'error-callback': () => fail('verification could not run. try again.'),
+				'expired-callback': () => fail('verification expired. try again.'),
+				'timeout-callback': () => fail('verification timed out. try again.'),
+				'unsupported-callback': () => fail('verification is not supported by this browser.')
 			});
 		} catch {
 			releaseTurnstileChallenge(deactivateReveal);
@@ -158,6 +146,7 @@
 				status = response.status === 429 ? 'rate-limited' : 'error';
 				statusMessage = result?.message ?? "I don't think you are human! Retry the challenge?";
 				removeWidget();
+				releaseTurnstileChallenge(deactivateReveal);
 				return;
 			}
 
@@ -169,12 +158,18 @@
 			releaseTurnstileChallenge(deactivateReveal);
 		} catch {
 			if (destroyed || controller.signal.aborted) return;
-			removeWidget();
-			status = 'error';
-			statusMessage = 'email reveal is unavailable. try again.';
+			fail('email reveal is unavailable. try again.');
 		} finally {
 			if (revealController === controller) revealController = undefined;
 		}
+	}
+
+	function fail(message: string) {
+		if (destroyed) return;
+		removeWidget();
+		releaseTurnstileChallenge(deactivateReveal);
+		status = 'error';
+		statusMessage = message;
 	}
 
 	onDestroy(() => {

@@ -10,7 +10,7 @@ export type LineKind = 'prompt' | 'output' | 'success' | 'error' | 'muted';
 export type ShellLine =
 	| { kind: Exclude<LineKind, 'prompt'>; text: string }
 	| { kind: 'prompt'; command: string; cwd: string }
-	| { kind: 'links'; path: string }
+	| { kind: 'links'; path: string; entries: RouteLinkEntry[] }
 	| { kind: 'socials' }
 	| { kind: 'projects' }
 	| { kind: 'banner' }
@@ -29,11 +29,17 @@ export type BlogPost = BlogPostMeta & {
 	markdown: string;
 };
 
+export type RouteLinkEntry = {
+	name: string;
+	directory: boolean;
+	url: string;
+};
+
 export type MdBlock =
 	| { type: 'heading'; level: number; text: string; html: string; id: string }
 	| { type: 'paragraph'; html: string }
 	| { type: 'list'; items: string[]; ordered: boolean }
-	| { type: 'code'; language: string; code: string; html: string }
+	| { type: 'code'; language: string; code: string; html: string; lineCount: number }
 	| { type: 'dist'; label: string; file: string; href: string }
 	| { type: 'quote'; html: string }
 	| { type: 'hr' };

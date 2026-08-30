@@ -1,12 +1,13 @@
-import { hasPostOrDirectory, loadPost, loadTerminalPageData, normalizePostPath } from '$lib/blog';
+import { normalizePostPath, resolveBlogPath } from '$lib/blog';
+import type { PageServerLoad } from './$types';
 
-export function load({ params }: { params: { slug: string } }) {
-	const requestedPath = normalizePostPath(`blog/${params.slug}`);
-	const post = loadPost(requestedPath);
+export const load: PageServerLoad = ({ params }) => {
+	const requestedPath = normalizePostPath(['blog', params.slug].filter(Boolean).join('/'));
+	const resolution = resolveBlogPath(requestedPath);
 
-	return loadTerminalPageData({
-		post,
+	return {
+		post: resolution.kind === 'post' ? resolution.post : undefined,
 		requestedPath,
-		notFound: !hasPostOrDirectory(requestedPath)
-	});
-}
+		notFound: resolution.kind === 'missing'
+	};
+};

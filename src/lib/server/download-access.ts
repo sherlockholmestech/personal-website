@@ -4,6 +4,7 @@ import { env } from '$env/dynamic/private';
 export const DOWNLOAD_ACCESS_COOKIE = 'dist_access';
 export const DOWNLOAD_ACCESS_MAX_AGE_SECONDS = 10 * 60;
 const developmentSecret = 'development-only-download-access-secret';
+const rejectedSecrets = new Set(['replace-with-at-least-32-random-characters']);
 
 export function downloadAccessConfigured() {
 	return downloadAccessSecret().length >= 32;
@@ -48,6 +49,6 @@ function createSignature(expiresAt: number, secret: string) {
 
 function downloadAccessSecret() {
 	const secret = env.DOWNLOAD_ACCESS_SECRET?.trim();
-	if (secret && secret.length >= 32) return secret;
+	if (secret && secret.length >= 32 && !rejectedSecrets.has(secret)) return secret;
 	return import.meta.env.DEV ? developmentSecret : '';
 }

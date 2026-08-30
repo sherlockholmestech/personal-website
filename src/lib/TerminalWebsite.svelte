@@ -24,9 +24,14 @@
 		toHomeRelative
 	} from '$lib/terminal/filesystem';
 	import { helpfulCommands } from '$lib/terminal/help';
-	import { highlightMarkdownCode, parseMarkdown } from '$lib/terminal/markdown';
+	import {
+		highlightMarkdownCode,
+		parseMarkdown,
+		tokenizeMarkdown,
+		type MarkdownTokens
+	} from '$lib/terminal/markdown';
 	import { isMobileViewport, shouldAvoidImplicitFocusViewport } from '$lib/terminal/media';
-	import { searchPosts, sortPosts } from '$lib/terminal/search';
+	import { createPostSearchIndex, searchPosts, sortPosts } from '$lib/terminal/search';
 	import {
 		DEFAULT_BLOG_SORT,
 		type BlogPost,
@@ -68,7 +73,7 @@
 	let input = $state('');
 	let cwd = $state(HOME_DIRECTORY);
 	let history = $state<ShellLine[]>([{ kind: 'banner' }]);
-	let selectedPath = $state('');
+	let activePostPath = $state('');
 	let currentView = $state<'terminal' | 'post'>('terminal');
 	let blogBrowserVisible = $state(false);
 	let photographyBrowserVisible = $state(false);
@@ -99,10 +104,12 @@
 	const TITLE_TRUNCATION_SUFFIX = '[...]';
 
 	let fileSystem = $derived(createFileSystem(posts));
+	let postsByPath = $derived(new Map(posts.map((post) => [post.path, post])));
+	let postSearchIndex = $derived(createPostSearchIndex(posts));
 	let selectedPost = $derived<BlogPostMeta>(
-		posts.find((post) => post.path === selectedPath) ??
-			(loadedPost?.path === selectedPath ? loadedPost : undefined) ??
-			(aboutPost.path === selectedPath ? aboutPost : undefined) ??
+		postsByPath.get(activePostPath) ??
+			(loadedPost?.path === activePostPath ? loadedPost : undefined) ??
+			(aboutPost.path === activePostPath ? aboutPost : undefined) ??
 			loadedPost ?? {
 				path: '',
 				title: '',
@@ -112,17 +119,16 @@
 			}
 	);
 	let selectedFullPost = $derived(
-		loadedPost?.path === selectedPath
+		loadedPost?.path === activePostPath
 			? loadedPost
-			: aboutPost.path === selectedPath
+			: aboutPost.path === activePostPath
 				? aboutPost
 				: undefined
 	);
-	let parsedPost = $derived(
-		selectedFullPost ? parseMarkdown(selectedFullPost.markdown, highlightedCode) : []
-	);
+	let postMarkdownTokens = $derived(tokenizeMarkdown(selectedFullPost?.markdown ?? ''));
+	let parsedPost = $derived(parseMarkdown(postMarkdownTokens, highlightedCode));
 	let postViewBlocks = $derived(parsedPost);
-	let fzfResults = $derived(sortPosts(searchPosts(posts, fzfQuery), blogSort));
+	let fzfResults = $derived(sortPosts(searchPosts(postSearchIndex, fzfQuery), blogSort));
 	let browserSelectedPost = $derived(fzfResults[fzfIndex] ?? selectedPost);
 	let browserPreviewMarkdown = $derived(
 		selectedFullPost?.path === browserSelectedPost.path
@@ -133,10 +139,9 @@
 	let browserPreviewHighlightedCode = $derived(
 		previewHighlightedCodeByKey[browserPreviewHighlightKey] ?? {}
 	);
+	let browserPreviewTokens = $derived(tokenizeMarkdown(browserPreviewMarkdown ?? ''));
 	let browserPreviewBlocks = $derived(
-		browserPreviewMarkdown
-			? parseMarkdown(browserPreviewMarkdown, browserPreviewHighlightedCode)
-			: []
+		parseMarkdown(browserPreviewTokens, browserPreviewHighlightedCode)
 	);
 	let terminalTitleText = $derived(currentView === 'post' ? selectedPost.title : TERMINAL_TITLE);
 	let metaPost = $derived(loadedPost);
@@ -144,8 +149,8 @@
 	let metaDescription = $derived(metaPost?.description || SITE_DESCRIPTION);
 
 	$effect(() => {
-		if (!selectedPath && posts.length) {
-			selectedPath = posts[0].path;
+		if (!activePostPath && posts.length) {
+			activePostPath = posts[0].path;
 		}
 	});
 
@@ -170,13 +175,9 @@
 		};
 		const resizeObserver = new ResizeObserver(updateTitlebarWidth);
 		resizeObserver.observe(terminalTitlebar);
-		window.addEventListener('resize', updateTitlebarWidth);
 		updateTitlebarWidth();
 
-		return () => {
-			resizeObserver.disconnect();
-			window.removeEventListener('resize', updateTitlebarWidth);
-		};
+		return () => resizeObserver.disconnect();
 	});
 
 	$effect(() => {
@@ -186,7 +187,7 @@
 
 	$effect(() => {
 		if (currentView === 'post' && selectedFullPost) {
-			void updateHighlightedCode(selectedFullPost.markdown);
+			void updateHighlightedCode(postMarkdownTokens, selectedFullPost.markdown);
 		} else {
 			highlightedCode = {};
 		}
@@ -217,7 +218,7 @@
 			return;
 		}
 
-		void updatePreviewHighlightedCode(key, markdown);
+		void updatePreviewHighlightedCode(key, browserPreviewTokens);
 	});
 
 	$effect(() => {
@@ -233,10 +234,13 @@
 				currentView = 'terminal';
 			} else {
 				if (loadedPost?.path === requestedPath || aboutPost.path === requestedPath) {
-					selectedPath = requestedPath;
+					activePostPath = requestedPath;
 					currentView = 'post';
 				} else {
-					history = [...history, { kind: 'links', path: requestedPath }];
+					history = [
+						...history,
+						{ kind: 'links', path: requestedPath, entries: childLinks(requestedPath) }
+					];
 				}
 			}
 			initializedRoutePath = requestedPath;
@@ -344,12 +348,15 @@
 	}
 
 	function truncateTerminalTitle(title: string, width: number) {
-		if (!terminalTitleMeasurer || width <= 0) return title;
+		if (width <= 0) return title;
+
+		const measure = terminalTitleMeasure();
+		if (!measure) return title;
 
 		const maxWidth = getTerminalTitleMaxWidth(width);
-		if (measureTerminalTitle(title) <= maxWidth) return title;
+		if (measure(title) <= maxWidth) return title;
 
-		if (measureTerminalTitle(TITLE_TRUNCATION_SUFFIX) > maxWidth) {
+		if (measure(TITLE_TRUNCATION_SUFFIX) > maxWidth) {
 			return TITLE_TRUNCATION_SUFFIX;
 		}
 
@@ -360,7 +367,7 @@
 			const middle = Math.ceil((low + high) / 2);
 			const candidate = `${title.slice(0, middle).trimEnd()}${TITLE_TRUNCATION_SUFFIX}`;
 
-			if (measureTerminalTitle(candidate) <= maxWidth) {
+			if (measure(candidate) <= maxWidth) {
 				low = middle;
 			} else {
 				high = middle - 1;
@@ -378,8 +385,8 @@
 		return width * 0.75;
 	}
 
-	function measureTerminalTitle(title: string) {
-		if (!terminalTitleMeasurer) return 0;
+	function terminalTitleMeasure() {
+		if (!terminalTitleMeasurer) return;
 		const style = getComputedStyle(terminalTitleMeasurer);
 		const context =
 			titleMeasureContext ??
@@ -391,8 +398,7 @@
 		context.font = style.font;
 
 		const padding = Number.parseFloat(style.paddingLeft) + Number.parseFloat(style.paddingRight);
-
-		return Math.ceil(context.measureText(title).width + padding);
+		return (title: string) => Math.ceil(context.measureText(title).width + padding);
 	}
 
 	function handlePromptKeydown(event: KeyboardEvent) {
@@ -449,97 +455,71 @@
 		const [name, ...args] = command.split(/\s+/);
 		const target = args.join(' ');
 
-		if (name === 'clear') {
-			history = [];
-			blogBrowserVisible = false;
-			photographyBrowserVisible = false;
-			if (currentView === 'post') closePostView();
-			return;
+		switch (name) {
+			case 'clear':
+				resetTerminal([]);
+				return;
+			case 'home':
+				resetTerminal([{ kind: 'banner' }]);
+				return;
+			case 'banner':
+				history = [...history, { kind: 'banner' }];
+				return;
+			case 'pwd':
+				print([cwd || ROOT_DIRECTORY]);
+				return;
+			case 'cd':
+				changeDirectory(target || HOME_DIRECTORY);
+				return;
+			case 'help':
+				history = [...history, { kind: 'help' }];
+				return;
+			case 'about':
+				openAboutPost();
+				return;
+			case 'info':
+				print([
+					'Sherlock Holmes',
+					'  site: personal blog in a terminal shell',
+					'  stack: SvelteKit, TypeScript, Flexoki, Ioskeley Mono',
+					'  focus: Rust, CTF notes, web development, and MUN'
+				]);
+				return;
+			case 'socials':
+				history = [...history, { kind: 'socials' }];
+				return;
+			case 'projects':
+				history = [...history, { kind: 'projects' }];
+				return;
+			case 'photography':
+				photographyQuery = target;
+				photographyCollectionSlug = '';
+				photographyPhotoSlug = '';
+				void openPhotographyBrowser();
+				return;
+			case 'ls':
+				listDirectory(target || '.');
+				return;
+			case 'tree':
+				treeDirectory(target || '.');
+				return;
+			case 'blog':
+				fzfQuery = target;
+				void openBlogSearch();
+				return;
+			case 'cat':
+				openPost(target, name);
+				return;
+			default:
+				print([`${name}: command not found`], 'error');
 		}
+	}
 
-		if (name === 'home') {
-			history = [{ kind: 'banner' }];
-			blogBrowserVisible = false;
-			photographyBrowserVisible = false;
-			if (currentView === 'post') closePostView();
-			return;
-		}
-
-		if (name === 'banner') {
-			history = [...history, { kind: 'banner' }];
-			return;
-		}
-
-		if (name === 'pwd') {
-			print([cwd || ROOT_DIRECTORY]);
-			return;
-		}
-
-		if (name === 'cd') {
-			changeDirectory(target || HOME_DIRECTORY);
-			return;
-		}
-
-		if (name === 'help') {
-			history = [...history, { kind: 'help' }];
-			return;
-		}
-
-		if (name === 'about') {
-			openAboutPost();
-			return;
-		}
-
-		if (name === 'info') {
-			print([
-				'Sherlock Holmes',
-				'  site: personal blog in a terminal shell',
-				'  stack: SvelteKit, TypeScript, Flexoki, Ioskeley Mono',
-				'  focus: Rust, CTF notes, web development, and MUN'
-			]);
-			return;
-		}
-
-		if (name === 'socials') {
-			history = [...history, { kind: 'socials' }];
-			return;
-		}
-
-		if (name === 'projects') {
-			history = [...history, { kind: 'projects' }];
-			return;
-		}
-
-		if (name === 'photography') {
-			photographyQuery = target;
-			photographyCollectionSlug = '';
-			photographyPhotoSlug = '';
-			void openPhotographyBrowser();
-			return;
-		}
-
-		if (name === 'ls') {
-			listDirectory(target || '.');
-			return;
-		}
-
-		if (name === 'tree') {
-			treeDirectory(target || '.');
-			return;
-		}
-
-		if (name === 'blog') {
-			fzfQuery = target;
-			void openBlogSearch();
-			return;
-		}
-
-		if (name === 'cat') {
-			openPost(target, name);
-			return;
-		}
-
-		print([`${name}: command not found`], 'error');
+	function resetTerminal(nextHistory: ShellLine[]) {
+		history = nextHistory;
+		blogBrowserVisible = false;
+		photographyBrowserVisible = false;
+		if (currentView === 'post') closePostView();
 	}
 
 	function changeDirectory(target: string) {
@@ -620,14 +600,14 @@
 			return;
 		}
 
-		selectedPath = entry.post.path;
+		activePostPath = entry.post.path;
 		blogBrowserVisible = false;
 		currentView = 'post';
 		void updateUrlForView(entry.post.path);
 	}
 
 	function openAboutPost() {
-		selectedPath = aboutPost.path;
+		activePostPath = aboutPost.path;
 		blogBrowserVisible = false;
 		currentView = 'post';
 		void updateUrlForView(aboutPost.path);
@@ -638,7 +618,7 @@
 		blogBrowserVisible = true;
 		fzfIndex = Math.max(
 			0,
-			fzfResults.findIndex((post) => post.path === selectedPath)
+			fzfResults.findIndex((post) => post.path === activePostPath)
 		);
 		await tick();
 		focusBlogSearchIfComfortable();
@@ -647,14 +627,13 @@
 	function moveFzfSelection(delta: number) {
 		if (!fzfResults.length) return;
 		fzfIndex = (fzfIndex + delta + fzfResults.length) % fzfResults.length;
-		selectedPath = fzfResults[fzfIndex].path;
 	}
 
 	function openFzfSelection(index = fzfIndex) {
 		const post = fzfResults[index];
 		if (!post) return;
 
-		selectedPath = post.path;
+		activePostPath = post.path;
 		currentView = 'post';
 		blogBrowserVisible = false;
 		void updateUrlForView(post.path);
@@ -759,20 +738,16 @@
 
 	function handleQueryInput() {
 		fzfIndex = 0;
-		selectedPath = fzfResults[0]?.path ?? selectedPath;
 	}
 
 	function handleBlogSortChange(nextSort: BlogSort) {
 		blogSort = nextSort;
-		const nextResults = sortPosts(searchPosts(posts, fzfQuery), nextSort);
 		fzfIndex = 0;
-		selectedPath = nextResults[0]?.path ?? selectedPath;
 		focusBlogSearchIfComfortable();
 	}
 
 	function selectFzfResult(index: number) {
 		fzfIndex = index;
-		selectedPath = fzfResults[index]?.path ?? selectedPath;
 		focusBlogSearchIfComfortable();
 	}
 
@@ -819,15 +794,15 @@
 		history = [...history, ...lines.map((text) => ({ kind, text }))];
 	}
 
-	async function updateHighlightedCode(markdown: string) {
-		const nextHighlightedCode = await highlightMarkdownCode(markdown);
+	async function updateHighlightedCode(tokens: MarkdownTokens, markdown: string) {
+		const nextHighlightedCode = await highlightMarkdownCode(tokens);
 		if (selectedFullPost?.markdown === markdown) {
 			highlightedCode = nextHighlightedCode;
 		}
 	}
 
-	async function updatePreviewHighlightedCode(key: string, markdown: string) {
-		const nextHighlightedCode = await highlightMarkdownCode(markdown);
+	async function updatePreviewHighlightedCode(key: string, tokens: MarkdownTokens) {
+		const nextHighlightedCode = await highlightMarkdownCode(tokens);
 		previewHighlightedCodeByKey = {
 			...previewHighlightedCodeByKey,
 			[key]: nextHighlightedCode
@@ -954,7 +929,7 @@
 									</div>
 								</div>
 							{:else if line.kind === 'links'}
-								<RouteLinks path={line.path} entries={childLinks(line.path)} />
+								<RouteLinks path={line.path} entries={line.entries} />
 							{:else if line.kind === 'socials'}
 								<SocialLinks />
 							{:else if line.kind === 'projects'}

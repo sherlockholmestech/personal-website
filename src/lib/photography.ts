@@ -11,6 +11,26 @@ export type PhotographyRouteState = {
 	photoSlug?: string;
 };
 
+const collectionsBySlug = new Map<string, PhotographyCollection>();
+const photographsByCollectionSlug = new Map<string, Map<string, Photograph>>();
+
+for (const collection of photographyCollections) {
+	if (collectionsBySlug.has(collection.slug)) {
+		throw new Error(`Duplicate photography collection slug: ${collection.slug}`);
+	}
+	collectionsBySlug.set(collection.slug, collection);
+
+	const photographsBySlug = new Map<string, Photograph>();
+	for (const photograph of collection.photographs) {
+		const slug = photographRouteSlug(photograph);
+		if (photographsBySlug.has(slug)) {
+			throw new Error(`Duplicate photograph slug in ${collection.slug}: ${slug}`);
+		}
+		photographsBySlug.set(slug, photograph);
+	}
+	photographsByCollectionSlug.set(collection.slug, photographsBySlug);
+}
+
 export function photographFileName(photograph: Photograph) {
 	return photograph.src.split('/').at(-1) ?? photograph.id;
 }
@@ -30,13 +50,11 @@ export function resolvePhotographyPath(path: string): PhotographyRouteState | un
 	const [, collectionSlug, photoSlug, ...rest] = normalizedPath.split('/');
 	if (!collectionSlug || rest.length) return undefined;
 
-	const collection = photographyCollections.find((entry) => entry.slug === collectionSlug);
+	const collection = collectionsBySlug.get(collectionSlug);
 	if (!collection) return undefined;
 	if (!photoSlug) return { collectionSlug };
 
-	const photograph = collection.photographs.find(
-		(entry) => photographRouteSlug(entry) === photoSlug
-	);
+	const photograph = photographsByCollectionSlug.get(collectionSlug)?.get(photoSlug);
 	if (!photograph) return undefined;
 
 	return { collectionSlug, photoSlug };
@@ -44,16 +62,16 @@ export function resolvePhotographyPath(path: string): PhotographyRouteState | un
 
 export function findPhotographyCollection(slug?: string) {
 	if (!slug) return undefined;
-	return photographyCollections.find((collection) => collection.slug === slug);
+	return collectionsBySlug.get(slug);
 }
 
 export function findPhotograph(collectionSlug?: string, photoSlug?: string) {
-	const collection = findPhotographyCollection(collectionSlug);
-	if (!collection || !photoSlug) return undefined;
+	if (!collectionSlug || !photoSlug) return undefined;
 
-	const photograph = collection.photographs.find(
-		(entry) => photographRouteSlug(entry) === photoSlug
-	);
+	const collection = findPhotographyCollection(collectionSlug);
+	if (!collection) return undefined;
+
+	const photograph = photographsByCollectionSlug.get(collectionSlug)?.get(photoSlug);
 	if (!photograph) return undefined;
 
 	return { collection, photograph };

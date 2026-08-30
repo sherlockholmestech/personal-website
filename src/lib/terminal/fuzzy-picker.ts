@@ -18,7 +18,8 @@ export function shouldHandleFuzzyPickerKeydown(
 
 	const target = event.target;
 	if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
-		return true;
+		if (!(target instanceof HTMLElement) || target === queryInput) return true;
+		return !target.closest('button, a, input, textarea, select, [role="button"], [role="option"]');
 	}
 
 	if (!(target instanceof HTMLElement) || target === queryInput) {

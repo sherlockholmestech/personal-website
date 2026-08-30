@@ -2,6 +2,7 @@
 	import { tick } from 'svelte';
 	import type { BlogPost, MdBlock } from '../types';
 	import { formatPostDate } from '../date';
+	import { centerElementPoint, pointRatio } from '../geometry';
 	import MarkdownBlocks from './MarkdownBlocks.svelte';
 
 	type TocItem = {
@@ -18,6 +19,7 @@
 	let imageZoomScroll = $state<HTMLDivElement>();
 	let imageZoomTarget = $state<HTMLImageElement>();
 	let headingElements = $state<HTMLElement[]>([]);
+	let headingOffsets = $state<number[]>([]);
 	let scrollFrame: number | undefined;
 	let toc = $derived<TocItem[]>([
 		{ id: 'post-top', level: 1, text: post.title },
@@ -76,12 +78,29 @@
 		const currentBlocks = blocks;
 		if (!viewport) return;
 
+		let cancelled = false;
+		let resizeObserver: ResizeObserver | undefined;
 		void tick().then(() => {
-			if (contentViewport !== viewport || blocks !== currentBlocks) return;
+			if (cancelled || contentViewport !== viewport || blocks !== currentBlocks) return;
 			headingElements = Array.from(viewport.querySelectorAll<HTMLElement>('[data-heading-id]'));
+			updateHeadingOffsets();
 			decorateMarkdownImages();
 			updateActiveHeading();
+
+			const content = viewport.querySelector<HTMLElement>('.post-content');
+			if (content) {
+				resizeObserver = new ResizeObserver(() => {
+					updateHeadingOffsets();
+					updateActiveHeading();
+				});
+				resizeObserver.observe(content);
+			}
 		});
+
+		return () => {
+			cancelled = true;
+			resizeObserver?.disconnect();
+		};
 	});
 
 	$effect(() => {
@@ -108,16 +127,35 @@
 	function updateActiveHeading() {
 		if (!contentViewport) return;
 
-		const viewportTop = contentViewport.getBoundingClientRect().top;
-		const scrollOffset = headingScrollOffset();
-		const current = headingElements
-			.filter((heading) => heading.getBoundingClientRect().top - viewportTop <= scrollOffset + 1)
-			.at(-1);
-		const nextHeading = current?.dataset.headingId ?? toc[0]?.id ?? '';
+		const targetOffset = contentViewport.scrollTop + headingScrollOffset() + 1;
+		let low = 0;
+		let high = headingOffsets.length - 1;
+		let currentIndex = -1;
+
+		while (low <= high) {
+			const middle = Math.floor((low + high) / 2);
+			if (headingOffsets[middle] <= targetOffset) {
+				currentIndex = middle;
+				low = middle + 1;
+			} else {
+				high = middle - 1;
+			}
+		}
+
+		const nextHeading = headingElements[currentIndex]?.dataset.headingId ?? toc[0]?.id ?? '';
 
 		if (nextHeading !== activeHeading) {
 			activeHeading = nextHeading;
 		}
+	}
+
+	function updateHeadingOffsets() {
+		if (!contentViewport) return;
+
+		const viewportTop = contentViewport.getBoundingClientRect().top;
+		headingOffsets = headingElements.map(
+			(heading) => contentViewport!.scrollTop + heading.getBoundingClientRect().top - viewportTop
+		);
 	}
 
 	function decorateMarkdownImages() {
@@ -152,11 +190,8 @@
 
 		event.preventDefault();
 		const rect = image.getBoundingClientRect();
-		void openImageZoom(
-			image,
-			clamp((event.clientX - rect.left) / rect.width, 0, 1),
-			clamp((event.clientY - rect.top) / rect.height, 0, 1)
-		);
+		const point = pointRatio(rect, event.clientX, event.clientY);
+		void openImageZoom(image, point.x, point.y);
 	}
 
 	function handleContentKeydown(event: KeyboardEvent) {
@@ -176,16 +211,11 @@
 
 	async function toggleImageZoom(event: MouseEvent) {
 		const targetRect = imageZoomTarget?.getBoundingClientRect();
-		const xRatio = targetRect
-			? clamp((event.clientX - targetRect.left) / targetRect.width, 0, 1)
-			: 0.5;
-		const yRatio = targetRect
-			? clamp((event.clientY - targetRect.top) / targetRect.height, 0, 1)
-			: 0.5;
+		const point = targetRect ? pointRatio(targetRect, event.clientX, event.clientY) : null;
 
 		imageZoomLevel = imageZoomLevel === 0 ? 1 : 0;
 		await tick();
-		centerZoomPoint(xRatio, yRatio);
+		centerZoomPoint(point?.x ?? 0.5, point?.y ?? 0.5);
 	}
 
 	function handleWindowKeydown(event: KeyboardEvent) {
@@ -196,18 +226,7 @@
 
 	function centerZoomPoint(xRatio: number, yRatio: number) {
 		if (!imageZoomScroll || !imageZoomTarget) return;
-
-		const scrollRect = imageZoomScroll.getBoundingClientRect();
-		const targetRect = imageZoomTarget.getBoundingClientRect();
-		const pointX = targetRect.left + targetRect.width * xRatio;
-		const pointY = targetRect.top + targetRect.height * yRatio;
-
-		imageZoomScroll.scrollLeft += pointX - (scrollRect.left + imageZoomScroll.clientWidth / 2);
-		imageZoomScroll.scrollTop += pointY - (scrollRect.top + imageZoomScroll.clientHeight / 2);
-	}
-
-	function clamp(value: number, min: number, max: number) {
-		return Math.min(max, Math.max(min, value));
+		centerElementPoint(imageZoomScroll, imageZoomTarget, xRatio, yRatio);
 	}
 </script>
 

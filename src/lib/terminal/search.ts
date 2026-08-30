@@ -1,17 +1,17 @@
 import type { BlogPostMeta, BlogSort } from './types';
 import { formatPostDate } from './date';
 
-export function searchPosts(posts: BlogPostMeta[], query: string) {
-	const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+type SearchablePost = {
+	post: BlogPostMeta;
+	haystack: string;
+	path: string;
+	tags: string[];
+};
 
-	if (!terms.length) return posts;
-
-	const tagTerms = terms.filter((term) => term.startsWith('#')).map((term) => term.slice(1));
-	const pathTerms = terms.filter((term) => term.startsWith('/')).map((term) => term.slice(1));
-	const textTerms = terms.filter((term) => !term.startsWith('#') && !term.startsWith('/'));
-
-	return posts.filter((post) => {
-		const haystack = [
+export function createPostSearchIndex(posts: BlogPostMeta[]): SearchablePost[] {
+	return posts.map((post) => ({
+		post,
+		haystack: [
 			post.title,
 			post.description,
 			post.path,
@@ -20,15 +20,29 @@ export function searchPosts(posts: BlogPostMeta[], query: string) {
 			post.tags.join(' ')
 		]
 			.join('\n')
-			.toLowerCase();
-		const tags = post.tags.map((tag) => tag.toLowerCase());
-		const path = post.path.toLowerCase();
-		return (
-			tagTerms.every((term) => tags.some((tag) => tag.includes(term))) &&
-			pathTerms.every((term) => path.includes(term)) &&
-			textTerms.every((term) => haystack.includes(term))
-		);
-	});
+			.toLowerCase(),
+		path: post.path.toLowerCase(),
+		tags: post.tags.map((tag) => tag.toLowerCase())
+	}));
+}
+
+export function searchPosts(index: SearchablePost[], query: string) {
+	const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+
+	if (!terms.length) return index.map(({ post }) => post);
+
+	const tagTerms = terms.filter((term) => term.startsWith('#')).map((term) => term.slice(1));
+	const pathTerms = terms.filter((term) => term.startsWith('/')).map((term) => term.slice(1));
+	const textTerms = terms.filter((term) => !term.startsWith('#') && !term.startsWith('/'));
+
+	return index
+		.filter(
+			({ haystack, path, tags }) =>
+				tagTerms.every((term) => tags.some((tag) => tag.includes(term))) &&
+				pathTerms.every((term) => path.includes(term)) &&
+				textTerms.every((term) => haystack.includes(term))
+		)
+		.map(({ post }) => post);
 }
 
 export function sortPosts(posts: BlogPostMeta[], sort: BlogSort) {
