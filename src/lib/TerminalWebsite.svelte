@@ -37,7 +37,8 @@
 		type BlogPost,
 		type BlogPostMeta,
 		type BlogSort,
-		type ShellLine
+		type ShellLine,
+		type Theme
 	} from '$lib/terminal/types';
 	import BlogBrowser from '$lib/terminal/components/BlogBrowser.svelte';
 	import HelpPanel from '$lib/terminal/components/HelpPanel.svelte';
@@ -51,6 +52,7 @@
 	import WelcomeBanner from '$lib/terminal/components/WelcomeBanner.svelte';
 
 	const ABOUT_PATH = 'about';
+	const THEME_STORAGE_KEY = 'flexoki-theme';
 	let {
 		data
 	}: {
@@ -84,6 +86,7 @@
 	let fzfIndex = $state(0);
 	let blogSort = $state<BlogSort>(DEFAULT_BLOG_SORT);
 	let initializedRoutePath = $state<string>();
+	let theme = $state<Theme>('dark');
 	let terminalViewport = $state<HTMLDivElement>();
 	let terminalScrollback = $state<HTMLDivElement>();
 	let terminalTitlebar = $state<HTMLDivElement>();
@@ -135,7 +138,7 @@
 			? selectedFullPost.markdown
 			: previewMarkdownByPath[browserSelectedPost.path]
 	);
-	let browserPreviewHighlightKey = $derived(browserSelectedPost.path);
+	let browserPreviewHighlightKey = $derived(`${theme}:${browserSelectedPost.path}`);
 	let browserPreviewHighlightedCode = $derived(
 		previewHighlightedCodeByKey[browserPreviewHighlightKey] ?? {}
 	);
@@ -155,6 +158,13 @@
 	});
 
 	onMount(() => {
+		const savedTheme = document.documentElement.dataset.theme;
+		if (savedTheme === 'dark' || savedTheme === 'light') {
+			theme = savedTheme;
+		} else {
+			document.documentElement.dataset.theme = theme;
+		}
+
 		const stopWatchingMobileViewport = watchMobileViewport();
 
 		void (async () => {
@@ -187,7 +197,7 @@
 
 	$effect(() => {
 		if (currentView === 'post' && selectedFullPost) {
-			void updateHighlightedCode(postMarkdownTokens, selectedFullPost.markdown);
+			void updateHighlightedCode(postMarkdownTokens, selectedFullPost.markdown, theme);
 		} else {
 			highlightedCode = {};
 		}
@@ -218,7 +228,7 @@
 			return;
 		}
 
-		void updatePreviewHighlightedCode(key, browserPreviewTokens);
+		void updatePreviewHighlightedCode(key, browserPreviewTokens, theme);
 	});
 
 	$effect(() => {
@@ -510,6 +520,14 @@
 			case 'cat':
 				openPost(target, name);
 				return;
+			case 'theme':
+				if (target === 'dark' || target === 'light') {
+					setTheme(target);
+					print([`theme set to flexoki ${target}`], 'success');
+				} else {
+					print(['usage: theme dark|light'], 'error');
+				}
+				return;
 			default:
 				print([`${name}: command not found`], 'error');
 		}
@@ -520,6 +538,16 @@
 		blogBrowserVisible = false;
 		photographyBrowserVisible = false;
 		if (currentView === 'post') closePostView();
+	}
+
+	function setTheme(nextTheme: Theme) {
+		theme = nextTheme;
+		document.documentElement.dataset.theme = nextTheme;
+		try {
+			localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+		} catch {
+			// The active session still changes theme when storage is unavailable.
+		}
 	}
 
 	function changeDirectory(target: string) {
@@ -794,19 +822,25 @@
 		history = [...history, ...lines.map((text) => ({ kind, text }))];
 	}
 
-	async function updateHighlightedCode(tokens: MarkdownTokens, markdown: string) {
-		const nextHighlightedCode = await highlightMarkdownCode(tokens);
-		if (selectedFullPost?.markdown === markdown) {
+	async function updateHighlightedCode(tokens: MarkdownTokens, markdown: string, nextTheme: Theme) {
+		const nextHighlightedCode = await highlightMarkdownCode(tokens, nextTheme);
+		if (selectedFullPost?.markdown === markdown && theme === nextTheme) {
 			highlightedCode = nextHighlightedCode;
 		}
 	}
 
-	async function updatePreviewHighlightedCode(key: string, tokens: MarkdownTokens) {
-		const nextHighlightedCode = await highlightMarkdownCode(tokens);
-		previewHighlightedCodeByKey = {
-			...previewHighlightedCodeByKey,
-			[key]: nextHighlightedCode
-		};
+	async function updatePreviewHighlightedCode(
+		key: string,
+		tokens: MarkdownTokens,
+		nextTheme: Theme
+	) {
+		const nextHighlightedCode = await highlightMarkdownCode(tokens, nextTheme);
+		if (theme === nextTheme) {
+			previewHighlightedCodeByKey = {
+				...previewHighlightedCodeByKey,
+				[key]: nextHighlightedCode
+			};
+		}
 	}
 
 	async function scrollToPrompt() {
@@ -859,6 +893,7 @@
 
 <main
 	class="workspace terminal-workspace"
+	class:light={theme === 'light'}
 	class:terminal-keyboard-open={mobileKeyboardOpen}
 	style={mobileViewportHeight
 		? `--terminal-mobile-viewport-height: ${mobileViewportHeight}px`

@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
 	<title id="title">Terminal prompt icon</title>
 	<rect width="64" height="64" rx="6" fill="#100f0f" />
-	<rect x="7.5" y="8.5" width="49" height="47" rx="2.5" fill="#1c1b1a" stroke="#d0a215" stroke-width="3" />
+	<rect x="7.5" y="8.5" width="49" height="47" rx="2.5" fill="#1c1b1a" stroke="#4385be" stroke-width="3" />
 	<path
 		d="m17.5 30.5 7.5 6-7.5 6"
 		fill="none"

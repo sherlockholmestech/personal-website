@@ -1,6 +1,7 @@
 <script lang="ts">
 	/* eslint-disable svelte/no-at-html-tags */
 
+	import { onDestroy } from 'svelte';
 	import HighlightedCode from '$lib/HighlightedCode.svelte';
 	import DistDownload from './DistDownload.svelte';
 	import type { MdBlock } from '../types';
@@ -12,10 +13,28 @@
 		blocks: MdBlock[];
 		compactCode?: boolean;
 	} = $props();
+	let copyState = $state<{ blockIndex: number; status: 'copied' | 'failed' }>();
+	let copyResetTimer: ReturnType<typeof setTimeout> | undefined;
 
 	function lineNumbers(lineCount: number) {
 		return Array.from({ length: lineCount }, (_, index) => index + 1);
 	}
+
+	async function copyCode(code: string, blockIndex: number) {
+		try {
+			await navigator.clipboard.writeText(code);
+			copyState = { blockIndex, status: 'copied' };
+		} catch {
+			copyState = { blockIndex, status: 'failed' };
+		}
+
+		clearTimeout(copyResetTimer);
+		copyResetTimer = setTimeout(() => {
+			copyState = undefined;
+		}, 2000);
+	}
+
+	onDestroy(() => clearTimeout(copyResetTimer));
 </script>
 
 {#each blocks as block, blockIndex (blockIndex)}
@@ -36,13 +55,26 @@
 	{:else if block.type === 'dist'}
 		<DistDownload href={block.href} label={block.label} file={block.file} />
 	{:else if block.type === 'code'}
-		<div
-			class={`relative overflow-visible border-y border-[var(--border)] bg-[var(--bg)] max-[760px]:mx-[-2px] ${compactCode ? 'my-[10px]' : 'my-[14px]'}`}
-		>
-			<span
-				class="absolute top-0 right-[12px] z-[1] -translate-y-1/2 bg-[var(--bg)] px-[6px] text-[12px] leading-none text-[var(--yellow)] lowercase"
-				>{block.language}</span
+		{@const activeCopyState = copyState?.blockIndex === blockIndex ? copyState.status : undefined}
+		<div class:code-block-compact={compactCode} class="code-block">
+			<span class="code-block-language">
+				{block.language}
+			</span>
+			<button
+				type="button"
+				class:code-block-copy-active={Boolean(activeCopyState)}
+				class="code-block-copy"
+				aria-label={`${activeCopyState === 'copied' ? 'Copied' : activeCopyState === 'failed' ? 'Copy failed, retry copying' : 'Copy'} ${block.language} code`}
+				onclick={() => copyCode(block.code, blockIndex)}
 			>
+				<span aria-live="polite">
+					{activeCopyState === 'copied'
+						? 'copied'
+						: activeCopyState === 'failed'
+							? 'retry'
+							: 'copy'}
+				</span>
+			</button>
 			<div
 				class={compactCode
 					? 'block'

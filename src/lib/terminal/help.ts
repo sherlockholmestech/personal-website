@@ -104,6 +104,12 @@ export const commandCatalog: CommandHelp[] = [
 		completion: 'directory'
 	},
 	{
+		name: 'theme',
+		command: 'theme dark|light',
+		description: 'Switch between Flexoki themes.',
+		group: 'display'
+	},
+	{
 		name: 'clear',
 		command: 'clear',
 		description: 'Clear terminal output.',

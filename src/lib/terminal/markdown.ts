@@ -1,7 +1,7 @@
 import { marked, type Tokens } from 'marked';
 import { bundledLanguages, type BundledLanguage } from 'shiki/langs';
 import { slugify } from './text';
-import type { MdBlock } from './types';
+import type { MdBlock, Theme } from './types';
 
 marked.use({
 	breaks: true
@@ -14,6 +14,7 @@ const languageLoadPromises = new Map<LanguageLoader, Promise<void>>();
 const loadedLanguageLoaders = new Set<LanguageLoader>();
 const MAX_HIGHLIGHT_CACHE_ENTRIES = 128;
 let highlighterPromise: ReturnType<typeof createCodeHighlighter> | undefined;
+let lightThemeLoadPromise: Promise<void> | undefined;
 
 const extraLanguageAliases: Record<string, BundledLanguage> = {
 	nasm: 'asm'
@@ -83,7 +84,7 @@ export function parseMarkdown(
 	});
 }
 
-export async function highlightMarkdownCode(tokens: MarkdownTokens) {
+export async function highlightMarkdownCode(tokens: MarkdownTokens, theme: Theme) {
 	const codeBlocks = tokens.filter((token): token is Tokens.Code => token.type === 'code');
 
 	if (!codeBlocks.length) return {};
@@ -91,7 +92,7 @@ export async function highlightMarkdownCode(tokens: MarkdownTokens) {
 	const entries = await Promise.all(
 		codeBlocks.map(async (block) => {
 			const code = codeBlockInfo(block);
-			const html = await highlightCode(code.text, code.language);
+			const html = await highlightCode(code.text, code.language, theme);
 			return [code.key, html] as const;
 		})
 	);
@@ -114,8 +115,8 @@ function codeBlockInfo(block: Tokens.Code) {
 	};
 }
 
-async function highlightCode(code: string, language: string) {
-	const key = codeKey(code, language);
+async function highlightCode(code: string, language: string, theme: Theme) {
+	const key = `${theme}:${codeKey(code, language)}`;
 	const cached = highlightedCodeCache.get(key);
 	if (cached) {
 		refreshCacheEntry(highlightedCodeCache, key, cached);
@@ -125,7 +126,7 @@ async function highlightCode(code: string, language: string) {
 	const pending = highlightedCodePromises.get(key);
 	if (pending) return pending;
 
-	const promise = renderHighlightedCode(code, language).then((html) => {
+	const promise = renderHighlightedCode(code, language, theme).then((html) => {
 		highlightedCodePromises.delete(key);
 		refreshCacheEntry(highlightedCodeCache, key, html);
 		trimCache(highlightedCodeCache);
@@ -135,17 +136,18 @@ async function highlightCode(code: string, language: string) {
 	return promise;
 }
 
-async function renderHighlightedCode(code: string, language: string) {
+async function renderHighlightedCode(code: string, language: string, theme: Theme) {
 	try {
 		highlighterPromise ??= createCodeHighlighter();
 		const highlighter = await highlighterPromise;
+		await loadCodeTheme(highlighter, theme);
 		const normalizedLanguage = normalizeHighlightLanguage(language);
 		if (normalizedLanguage !== 'text') {
 			await loadCodeLanguage(highlighter, normalizedLanguage);
 		}
 		return highlighter.codeToHtml(code, {
 			lang: normalizedLanguage,
-			theme: 'vitesse-dark'
+			theme: theme === 'dark' ? 'vitesse-dark' : 'vitesse-light'
 		});
 	} catch {
 		return `<pre><code>${escapeHtml(code)}</code></pre>`;
@@ -165,6 +167,18 @@ async function createCodeHighlighter() {
 		langs: [],
 		themes: [vitesseDark]
 	});
+}
+
+async function loadCodeTheme(
+	highlighter: Awaited<ReturnType<typeof createCodeHighlighter>>,
+	theme: Theme
+) {
+	if (theme === 'dark') return;
+
+	lightThemeLoadPromise ??= import('@shikijs/themes/vitesse-light').then(
+		({ default: vitesseLight }) => highlighter.loadTheme(vitesseLight)
+	);
+	return lightThemeLoadPromise;
 }
 
 function normalizeHighlightLanguage(language: string): BundledLanguage | 'text' {
