@@ -16,6 +16,7 @@
 	let photoViewerScroll = $state<HTMLDivElement>();
 	let photoViewerImage = $state<HTMLImageElement>();
 	let photoViewerMeta = $state<HTMLDivElement>();
+	let photoViewerClose = $state<HTMLButtonElement>();
 	let photoViewerMetaHeight = $state(120);
 	let photoZoomed = $state(false);
 	let photoDragging = $state(false);
@@ -52,6 +53,7 @@
 		await tick();
 		if (photoDialog && !photoDialog.open) {
 			photoDialog.showModal();
+			photoViewerClose?.focus({ preventScroll: true });
 		}
 	}
 
@@ -205,6 +207,7 @@
 				{/if}
 			</div>
 			<button
+				bind:this={photoViewerClose}
 				type="button"
 				class="photography-photo-viewer-close"
 				aria-label="Close photograph"

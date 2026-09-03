@@ -224,6 +224,15 @@ export const photographyCollections: PhotographyCollection[] = [
 		description: 'The fleeting phenomena of nature that we see in concrete jungles.',
 		photographs: [
 			{
+				id: 'natural-phenomena-2026-08-29',
+				src: '/photography/natural-phenomena/20260829_210030_watermark.jpg',
+				alt: 'The moon shining above sheltered walkways at night.',
+				date: '2026-08-29',
+				camera: 'Honor Magic6 Pro (HONOR BVL-N49)',
+				width: 2781,
+				height: 2781
+			},
+			{
 				id: 'natural-phenomena-2026-06-13',
 				src: '/photography/natural-phenomena/20260613_184334_watermark.jpg',
 				alt: 'Pink as ever...',
